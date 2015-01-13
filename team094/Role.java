@@ -15,13 +15,14 @@ abstract class Role {
                                      Direction.SOUTH,
                                      Direction.SOUTH_WEST,
                                      Direction.WEST,
-                                     Direction.NORTH_WEST};
+                                     Direction.NORTH_WEST
+                                    };
     RobotController rc;
     Random rand;
     Team team;
     Team enemyTeam;
     int range;
-    
+
     Role(RobotController rc) {
         this.rc = rc;
         rand = new Random(rc.getID());
@@ -30,37 +31,37 @@ abstract class Role {
         range = rc.getType().attackRadiusSquared;
     }
 
-    abstract void execute(); 
+    abstract void execute();
 
     static int directionToInt(Direction d) {
         switch(d) {
-            case NORTH:
-                return 0;
-            case NORTH_EAST:
-                return 1;
-            case EAST:
-                return 2;
-            case SOUTH_EAST:
-                return 3;
-            case SOUTH:
-                return 4;
-            case SOUTH_WEST:
-                return 5;
-            case WEST:
-                return 6;
-            case NORTH_WEST:
-                return 7;
-            default:
-                System.err.println("Unknown direction used. What?");
-                return -1;
+        case NORTH:
+            return 0;
+        case NORTH_EAST:
+            return 1;
+        case EAST:
+            return 2;
+        case SOUTH_EAST:
+            return 3;
+        case SOUTH:
+            return 4;
+        case SOUTH_WEST:
+            return 5;
+        case WEST:
+            return 6;
+        case NORTH_WEST:
+            return 7;
+        default:
+            System.err.println("Unknown direction used. What?");
+            return -1;
         }
     }
 
-     
+
 
     void autotransferSupply() throws GameActionException {
         RobotInfo[] nearbyAllies = rc.senseNearbyRobots(rc.getLocation(),
-                GameConstants.SUPPLY_TRANSFER_RADIUS_SQUARED, team);
+                                   GameConstants.SUPPLY_TRANSFER_RADIUS_SQUARED, team);
         if (nearbyAllies.length > 0) {
             double supply = rc.getSupplyLevel();
             RobotInfo bestTarget = nearbyAllies[0];

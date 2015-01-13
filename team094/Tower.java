@@ -6,7 +6,7 @@ import battlecode.common.RobotType;
 import battlecode.common.*;
 import java.util.*;
 
-class Tower extends Role { 
+class Tower extends Role {
 
     Tower(RobotController rc) {
         super(rc);
@@ -14,7 +14,7 @@ class Tower extends Role {
 
     void execute() {
         try {
-	    if (rc.isWeaponReady()) {
+            if (rc.isWeaponReady()) {
                 RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
                 amove(enemies);
             }
@@ -23,7 +23,7 @@ class Tower extends Role {
                 autotransferSupply();
             }
 
-	    if (rc.isCoreReady()) {
+            if (rc.isCoreReady()) {
                 Direction d = directions[(int)(rand.nextDouble()*8)];
                 if (rc.canMove(d)) {
                     rc.move(d);

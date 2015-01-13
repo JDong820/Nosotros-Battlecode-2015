@@ -6,7 +6,7 @@ import battlecode.common.RobotType;
 import battlecode.common.*;
 import java.util.*;
 
-class Beaver extends Role { 
+class Beaver extends Role {
 
     Beaver(RobotController rc) {
         super(rc);
@@ -16,7 +16,7 @@ class Beaver extends Role {
         try {
             autotransferSupply();
 
-	    if (rc.isCoreReady()) {
+            if (rc.isCoreReady()) {
                 Direction d = directions[(int)(rand.nextDouble()*8)];
                 if (rc.canMove(d)) {
                     rc.move(d);
