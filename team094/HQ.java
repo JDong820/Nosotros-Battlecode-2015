@@ -6,7 +6,7 @@ import battlecode.common.RobotType;
 import battlecode.common.*;
 import java.util.*;
 
-class HQ extends Role { 
+class HQ extends Role {
 
     HQ(RobotController rc) {
         super(rc);
@@ -23,7 +23,7 @@ class HQ extends Role {
             e.printStackTrace();
         }
     }
-   
+
     // Returns false when all possible spawn locations are blocked.
     boolean spawn(Direction d, RobotType type) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
@@ -34,7 +34,7 @@ class HQ extends Role {
                 return true;
             }
         }
-        return false; 
+        return false;
     }
 
 }
