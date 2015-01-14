@@ -26,6 +26,9 @@ public class RobotPlayer {
         case TOWER:
             role = new Tower(rc);
             break;
+        case MINERFACTORY:
+            role = new MinerFactory(rc);
+            break;
         default:
             System.err.println("Can't handle this robot type: " +
                                type.toString());
@@ -43,7 +46,6 @@ public class RobotPlayer {
                 role.execute();
             } catch (Exception e) {
                 System.err.println(e + " RobotPlayer Exception");
-                System.exit(1);
             }
             rc.yield();
         }

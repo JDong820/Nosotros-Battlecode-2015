@@ -34,18 +34,18 @@ class HQ extends Role {
                     if (rc.getTeamOre() >= 100) {
                         //spawn(Direction.NORTH);
                         if (spawn(directions[(int)(rand.nextDouble()*8)],
-                                    RobotType.BEAVER)) {
+                                  RobotType.BEAVER)) {
                             ++beaverCount;
                         }
                     }
                 }
             } else {
                 autotransferSupply(Params.SUPPLY_HQ_A,
-                        Params.SUPPLY_HQ_B,
-                        Params.SUPPLY_HQ_C,
-                        Params.SUPPLY_HQ_D,
-                        Params.SUPPLY_HQ_E,
-                        Params.SUPPLY_HQ_F);
+                                   Params.SUPPLY_HQ_B,
+                                   Params.SUPPLY_HQ_C,
+                                   Params.SUPPLY_HQ_D,
+                                   Params.SUPPLY_HQ_E,
+                                   Params.SUPPLY_HQ_F);
             }
         } catch (Exception e) {
             System.err.println(e.toString() + " HQ Exception\n");
@@ -65,7 +65,7 @@ class HQ extends Role {
         }
         return false;
     }
-    
+
     private int calcBeaverCap(double a, int b, int c) {
         double beaverCap = a*base.distanceSquaredTo(enemy) + b;
         return beaverCap > c ? (int)beaverCap : c;

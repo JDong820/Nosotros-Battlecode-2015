@@ -1,9 +1,12 @@
-package team094;
 // Woo hoo paramaterization :)
+// Various constants that may be optimized are listed here.
+package team094;
 
 class Params {
+    //
     // HQ
-    
+    //
+
     // 0 < BEAVER_CAP_A << 1.
     // 0 <= BEAVER_CAP_B
     // 0 <= BEAVER_CAP_C = min beavers
@@ -32,7 +35,19 @@ class Params {
     public static final int SUPPLY_HQ_E = 9000;
     public static final int SUPPLY_HQ_F = 0;
 
+    //
     // Beaver
+    //
+
+    // 0 < BEAVER_CAP_A << 1.
+    // 0 <= BEAVER_CAP_B
+    // 0 <= BEAVER_CAP_C = min beavers
+    //
+    // minerFactoryCap = f(Maparea > 0)
+    // minerFactoryCap = max(c, a*D + b)
+    public static final double MINERFACTORY_CAP_A = 0.0005;
+    public static final int MINERFACTORY_CAP_B = 0;
+    public static final int MINERFACTORY_CAP_C = 4;
 
     // if current ore < X, stop mining
     public static final int BEAVER_ORE_THRESHOLD = 10;
@@ -54,7 +69,9 @@ class Params {
     public static final int SUPPLY_BEAVER_E = 42;
     public static final int SUPPLY_BEAVER_F = 42;
 
+    //
     // Tower
+    //
 
     // supposed to be min_tower_supply
     public static final int TOWER_SUPPLY_THRESHOLD = 420;

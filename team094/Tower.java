@@ -14,20 +14,15 @@ class Tower extends Role {
 
     void execute() {
         try {
-            if (rc.isWeaponReady()) {
-                RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
-                amove(enemies);
-            }
-    
-            // This code smells bad.
-            if (rc.getSupplyLevel() > Params.TOWER_SUPPLY_THRESHOLD) {
-                autotransferSupply();
-            }
-
             if (rc.isCoreReady()) {
-                Direction d = directions[(int)(rand.nextDouble()*8)];
-                if (rc.canMove(d)) {
-                    rc.move(d);
+                if (rc.isWeaponReady()) {
+                    RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
+                    amove(enemies);
+                }
+            } else {
+                // This code smells bad.
+                if (rc.getSupplyLevel() > Params.TOWER_SUPPLY_THRESHOLD) {
+                    autotransferSupply();
                 }
             }
         } catch (Exception e) {
