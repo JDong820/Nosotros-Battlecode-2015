@@ -21,6 +21,9 @@ abstract class Role {
     Random rand;
     Team team;
     Team enemyTeam;
+    MapLocation base;
+    MapLocation enemy;
+    MapLocation location;
     int range;
 
     Role(RobotController rc) {
@@ -28,7 +31,14 @@ abstract class Role {
         rand = new Random(rc.getID());
         team = rc.getTeam();
         enemyTeam = team.opponent();
+        base = rc.senseHQLocation();
+        enemy = rc.senseEnemyHQLocation();
+        location = rc.getLocation();
         range = rc.getType().attackRadiusSquared;
+    }
+
+    void update() {
+        location = rc.getLocation();
     }
 
     abstract void execute();
@@ -57,21 +67,63 @@ abstract class Role {
         }
     }
 
-
+    // optimal supply trasfer = f(X, Y, D) >= 0, X, Y, D >= 0.
+    // Note: originSupply is probobaly always rc.getSupply()
+    private int calcSupplyTransfer(double originSupply,
+                                   double targetSupply,
+                                   int dsquared,
+                                   RobotType targetType,
+                                   double a, double b, double c, int d, int e) {
+        switch (targetType) {
+            case HQ:
+                return 0;
+            default:
+                int optimalTransfer = (int) (a*originSupply - b*targetSupply + c*dsquared);
+                if (optimalTransfer < d || targetSupply > e) {
+                    return 0;
+                }
+                return optimalTransfer;
+        }
+    };
 
     void autotransferSupply() throws GameActionException {
-        RobotInfo[] nearbyAllies = rc.senseNearbyRobots(rc.getLocation(),
-                                   GameConstants.SUPPLY_TRANSFER_RADIUS_SQUARED, team);
-        if (nearbyAllies.length > 0) {
-            double supply = rc.getSupplyLevel();
-            RobotInfo bestTarget = nearbyAllies[0];
-            for (RobotInfo ri: nearbyAllies) {
-                if (ri.supplyLevel < supply)
-                    bestTarget = ri;
-            }
-            int transferQuantity = (int)((supply - bestTarget.supplyLevel)/2);
-            if (transferQuantity > 42) {
-                rc.transferSupplies(transferQuantity, bestTarget.location);
+        // Params (a,b,c,d,e,f):
+        // (origin_coeff, target_coeff, d_coeff,
+        //  min_transfer, max_target, baseline)
+        // Constraints:
+        // d >= 0, e >= 0, f >= 0
+        switch (rc.getType()) {
+            default:
+                autotransferSupply(0.5, 0.5, 0, 42, 42, 42);
+                break;
+        }
+    }
+    
+    void autotransferSupply(double a, double b, double c,
+                            int d, int e, int f) throws GameActionException {
+        double supply = rc.getSupplyLevel();
+        if (supply > f) {
+            RobotInfo[] nearbyAllies = rc.senseNearbyRobots(rc.getLocation(),
+                    GameConstants.SUPPLY_TRANSFER_RADIUS_SQUARED, team);
+            if (nearbyAllies.length > 0) {
+                RobotInfo bestTarget = nearbyAllies[0];
+
+                for (RobotInfo ri: nearbyAllies) {
+                    if (ri.supplyLevel < bestTarget.supplyLevel) {
+                        bestTarget = ri;
+                    }
+                    if (ri.supplyLevel == 0) {
+                        break;
+                    }
+                }
+                int targetTransfer = calcSupplyTransfer(supply,
+                        bestTarget.supplyLevel,
+                        bestTarget.location.distanceSquaredTo(rc.getLocation()),
+                        bestTarget.type,
+                        a, b, c, d, e);
+                if (targetTransfer > 0) {
+                    rc.transferSupplies(targetTransfer, bestTarget.location);
+                }
             }
         }
     }
