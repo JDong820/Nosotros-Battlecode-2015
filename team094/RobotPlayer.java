@@ -39,6 +39,7 @@ public class RobotPlayer {
 
         while(true) {
             try {
+                role.update();
                 role.execute();
             } catch (Exception e) {
                 System.err.println(e + " RobotPlayer Exception");

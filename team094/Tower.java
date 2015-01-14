@@ -1,15 +1,15 @@
 package team094;
-import battlecode.common.Direction;
-import battlecode.common.GameConstants;
-import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import battlecode.common.*;
+import team094.Params;
 import java.util.*;
+import battlecode.common.*;
 
 class Tower extends Role {
 
     Tower(RobotController rc) {
         super(rc);
+    }
+
+    void update() {
     }
 
     void execute() {
@@ -18,8 +18,9 @@ class Tower extends Role {
                 RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
                 amove(enemies);
             }
-
-            if (rc.getSupplyLevel() > 420) {
+    
+            // This code smells bad.
+            if (rc.getSupplyLevel() > Params.TOWER_SUPPLY_THRESHOLD) {
                 autotransferSupply();
             }
 
@@ -30,7 +31,7 @@ class Tower extends Role {
                 }
             }
         } catch (Exception e) {
-            System.err.println(e.toString() + " HQ Exception\n");
+            System.err.println(e.toString() + " Tower Exception\n");
             e.printStackTrace();
         }
     }
