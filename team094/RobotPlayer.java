@@ -41,7 +41,7 @@ public class RobotPlayer {
                 role.update();
                 role.execute();
             } catch (Exception e) {
-                System.err.println(e + " RobotPlayer Exception");
+                System.err.println(e + ": RobotPlayer Exception");
             }
             rc.yield();
         }

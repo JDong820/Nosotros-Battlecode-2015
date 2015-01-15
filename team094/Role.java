@@ -13,7 +13,7 @@ abstract class Role {
                                            Direction.NORTH_WEST
                                           };
     final RobotController rc;
-    Random rand;
+    final int id;
     final Team team;
     final Team enemyTeam;
     final MapLocation base;
@@ -21,28 +21,33 @@ abstract class Role {
     MapLocation location;
     final int range;
 
+    final Random rand;
 
     // Mailbox 
-    Msg msg;
-    int msgIndex = 0;
+    Msg unreadMsg;
+    // Absolute index.
+    int inboxIndex;
 
     // Try to always have at least this many bytecodes remaining.
-    final int safety = 500;
+    final int safety = 1000;
 
     Role(RobotController rc) {
         this.rc = rc;
-        rand = new Random(rc.getID());
+        id = rc.getID();
         team = rc.getTeam();
         enemyTeam = team.opponent();
         base = rc.senseHQLocation();
         enemy = rc.senseEnemyHQLocation();
         location = rc.getLocation();
         range = rc.getType().attackRadiusSquared;
+
+        rand = new Random(id);
     }
 
-    // Methods
     abstract void update();
     abstract void execute();
+
+    abstract protected void handleMessage(Msg m);
 
     static int directionToInt(Direction d) {
         switch(d) {
@@ -68,17 +73,6 @@ abstract class Role {
         }
     }
 
-    protected Msg nextMsg() throws GameActionException {
-        final int inboxBegin;
-        switch (rc.getType()) {
-            case HQ:
-                inboxBegin = 0x0000;
-                return nextMsg(inboxBegin, inboxBegin + 0x1000);
-            default:
-                inboxBegin = 0x0000;
-                return null;
-        }
-    }
 
     protected boolean send(RobotType targetType, Msg msg) throws GameActionException {
         // dataLen is a byte, so max packet size is 0xff+2
@@ -149,14 +143,10 @@ abstract class Role {
                     // Get next message spot
                     int nextMessageOffset = 0;
                     // TODO: use a constants file (INBOX_SIZE).
-                    int header1 = rc.readBroadcast(inboxOffset + nextMessageOffset);
-                    int headeR2 = rc.readBroadcast(inboxOffset + nextMessageOffset + 1);
                     while (nextMessageOffset < 0x1000 &&
                            rc.readBroadcast(inboxOffset + nextMessageOffset) != 0) {
-                        // Get second header.
-                        int header2 = rc.readBroadcast(inboxOffset + nextMessageOffset + 1);
-                        nextMessageOffset += Msg.headerLen +
-                            Msg.getPacketLenFromHeader2(header2);
+                        Header h = new Header(rc, inboxOffset + nextMessageOffset);
+                        nextMessageOffset += h.getPacketLen();
                     }
                     // "Transaction" semi-guarantee
                     if (Clock.getBytecodesLeft() > msg.getPacketLen()*25 + safety) {
@@ -186,7 +176,7 @@ abstract class Role {
         }
     };
 
-    void autotransferSupply() throws GameActionException {
+    public void autotransferSupply() throws GameActionException {
         // Params (a,b,c,d,e,f):
         // (origin_coeff, target_coeff, d_coeff,
         //  min_transfer, max_target, baseline)
@@ -199,7 +189,7 @@ abstract class Role {
         }
     }
 
-    void autotransferSupply(double a, double b, double c,
+    public void autotransferSupply(double a, double b, double c,
                             int d, int e, int f) throws GameActionException {
         double supply = rc.getSupplyLevel();
         if (supply > f) {
@@ -245,43 +235,64 @@ abstract class Role {
         }
         return false;
     }
-
-    protected Msg nextMsg(int inboxBegin,
-                          int inboxEnd) throws GameActionException {
-        if (inboxBegin + msgIndex < inboxEnd) {
-            Msg msg = new Msg(rc, 0xffff & (inboxBegin + msgIndex));
-            msgIndex += msg.getPacketLen();
-            if (msg.getSenderPid() == 0 && msg.getTargetPid() == 0) {
-                if (msgIndex > 0) {
-                    if (clearMessages(0, msgIndex)) {
-                        msgIndex = 0;
-                    }
-                }
-                return null;
-            } else {
-                return msg;
-            }
-        } else {
-            System.out.println("Read no messages because mailbox full. Clearing.");
-            // Mailbox full and needs clearing; impossible to have messages.
-            if (clearMessages(0, inboxEnd)) {
-                msgIndex = 0;
-            }
+    
+    protected Msg fetchNextMsg(int inboxBegin,
+                               int inboxEnd) throws GameActionException {
+        final Header h = Header.readNextUnreadHeader(rc, inboxBegin, inboxEnd,
+                                                     inboxIndex);
+        // Only get null headers if out of range; looking past inboxEnd.
+        if (h == null) { 
+            System.out.println("Mailbox full! Clearing.");
+            // Clear the entire mailbox.
+            clearMessages(inboxBegin, inboxEnd);
+            inboxIndex = inboxBegin;
             return null;
         }
+
+        // A sender of 0xffffffff indicates we are at the end of the mailbox.
+        // Note that max senderPid is 0x0000fffe.
+        if (h.getSenderPid() == -1) {
+            // If all of the messages from the beginning have been read,
+            // clear the mailbox.
+            if (inboxBegin < inboxIndex) {
+                final Header pre = Header.readNextUnreadHeader(rc,
+                        inboxBegin, inboxIndex, inboxBegin);
+                // Note: untested behavior near end of mailbox.
+                if (pre == null) {
+                    // Tricky optimization where the header holds the mailbox end.
+                    clearMessages(inboxBegin, h.getAbsoluteOffset());
+                    //inboxIndex = inboxBegin;
+                }
+            }
+            // TODO: Figure out how to distinguish between awaiting new message
+            // and read head too forward due to previous clearMessages call.
+            inboxIndex = inboxBegin;
+            return null;
+        }
+
+        // Cruft caused by using relative index.
+        inboxIndex += h.getPacketLen();
+
+        if (h.getTargetPid() == ((0xffff & id) % 0xffff) ||
+            h.getTargetPid() == 0xffff) {
+            rc.broadcast(h.getAbsoluteOffset(), (0xffff0000 | (0x00ff & h.getDataLen())));
+            return new Msg(rc, h);
+        }
+
+        //System.out.println("Skipping message @ 0x" +
+        //        Integer.toHexString(inboxIndex));
+        // Skip over messages addresed to others.
+        return fetchNextMsg(inboxBegin, inboxEnd);
     }
 
     // memset [start, stop) = {0}
-    // Idea: distributed clear; use idle buildings (supply depot).
     // NOTE: race condition if someone tries writing as we clear; lost message.
-    private boolean clearMessages(int start, int stop) throws GameActionException {
-        // "Transaction" semi-guarantee
-        if (Clock.getBytecodesLeft() > (stop - start)*25 + safety) {
-            for (int i = start; i < stop; ++i) {
-                rc.broadcast(i, 0);
-            }
-            return true;
+    // ^ should never happen with battlecode 'threading' model.
+    // NOTE: if doesn't finish in a turn, everyone joins in in the derp.
+    private void clearMessages(int start, int stop) throws GameActionException {
+        // Reverse order means we can stop whenever.
+        for (int i = stop - 1; i >= start; --i) {
+            rc.broadcast(i, 0);
         }
-        return false;
     }
 }

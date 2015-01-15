@@ -2,146 +2,101 @@ package team094;
 import battlecode.common.*;
 import java.util.*;
 
-// Protocol
-// Header 1
-// 0xffff0000 self()
-// 0x0000ffff Pid
-// Header 2
-// 0xffff0000 Timeout
-// 0x0000ff00 Code
-// 0x000000ff DataLen
-// Data
+// TODO: use the Header class.
 class Msg {
     // Packet data; can you feel the immutable state?
-    final int senderPid; // From:
-    final int targetPid; // To:
-    final int timeout;
-    final int code;
-    final short dataLen;
+    final Header header;
     final ArrayList<Integer> data;
 
     final RobotController rc;
     final ArrayList<Integer> packet;
 
-    static final byte headerLen = 2;
-
-    // Read and Decode
-    Msg(RobotController rc, int offset) throws GameActionException{
-        this(rc, readMessageFromOffset(rc, offset)); 
-    }
     // Decode packet
     Msg(RobotController rc, ArrayList<Integer> msg) {
         if (msg == null) {
-            senderPid = 0;
-            targetPid = 0;
-            timeout = -1;
-            code = 0;
-            dataLen = -1;
+            header = null;
             data = null;
 
             this.rc = null;
             packet = null;
         } else {
-            int header1 = msg.get(0);
-            int header2 = msg.get(1);
-
-            senderPid = senderPidFromHeader(header1);
-            targetPid = targetPidFromHeader(header1);
-            timeout = timeoutFromHeader(header2);
-            code = codeFromHeader(header2);
-            dataLen = dataLenFromHeader(header2);
-            data = dataFromMsg(dataLen, msg);
+            header = new Header(msg.get(0), msg.get(1));
+            data = dataFromMsg(header.getDataLen(), msg);
 
             this.rc = rc;
             packet = msg;
         }
     }
+    // Read
+    Msg(RobotController rc, int offset) throws GameActionException{
+        this(rc, readPacketFromOffset(rc, offset)); 
+    }
+    // Read from header
+    Msg(RobotController rc, Header h) throws GameActionException{
+        header = h;
+        data = readDataAfterHeader(rc, h);
+
+        this.rc = rc;
+        packet = encode(h, data);
+    }
     // Shout
     Msg(RobotController rc, int code, ArrayList<Integer> data) {
-        senderPid = rc.getID() % 0x10000;
-        targetPid = 0xffff; // Reserved as allcast.
-        timeout = 2000;// GameConstants.ROUND_MAX_LIMIT;
-        this.code = code;
+        final short dataLen;
         if (data == null) {
             dataLen = 0;
-            this.data = null;
-
-            this.rc = rc;
-            packet = encode(senderPid, targetPid, timeout, code, dataLen, data);
-        } else if (data.size() > 0xff) { // Error case, will null pointer exception.
-            dataLen = -1;
-            this.data = null;
-
-            this.rc = null;
-            packet = null;
-        } else { // Non-null, valid data.
-            dataLen = (short)(0xff & data.size());
-            this.data = data;
-
-            this.rc = rc;
-            packet = encode(senderPid, targetPid, timeout, code, dataLen, data);
+        } else if (data.size() > 0xff) { 
+            System.err.println("Tried encoding packet that was too long.");
+            dataLen = 0; 
+            data = null;
+        } else {
+            dataLen = (short)(0x00ff & data.size());
         }
+        this.data = data;
+        header = new Header(rc.getID() % 0x10000,
+                            0xffff, // Reserved as allcast.
+                            2000,// GameConstants.ROUND_MAX_LIMIT;
+                            code, 
+                            dataLen);
+        this.rc = rc;
+        packet = encode(header, data);
     }
     // Whisper
     Msg(RobotController rc,
         int targetPid, int code, ArrayList<Integer> data) {
-        senderPid = rc.getID() % 0x10000;
-        this.targetPid = ((0xffff & targetPid) % 0xffff); // Note, not % 0x10000.
-        timeout = 2000;// GameConstants.ROUND_MAX_LIMIT;
-        this.code = code;
+        final short dataLen;
         if (data == null) {
             dataLen = 0;
-            this.data = null;
-
-            this.rc = rc;
-            packet = encode(senderPid, targetPid, timeout, code, dataLen, data);
-        } else if (data.size() > 0xff) { // Error case, will null pointer exception.
-            dataLen = -1;
-            this.data = null;
-
-            this.rc = null;
-            packet = null;
-        } else { // Non-null, valid data.
-            dataLen = (short)(0xff & data.size());
-            this.data = data;
-
-            this.rc = rc;
-            packet = encode(senderPid, targetPid, timeout, code, dataLen, data);
-        }
-    }
-    // Used in constructor Msg(rc, offset).
-    private static ArrayList<Integer> readMessageFromOffset(RobotController rc,
-                                                            int offset) throws GameActionException {
-        int header1 = rc.readBroadcast(offset);
-        if (header1 == 0) {
-            return null;
+        } else if (data.size() > 0xff) { 
+            System.err.println("Tried encoding packet that was too long.");
+            dataLen = 0; 
+            data = null;
         } else {
-            int header2 = rc.readBroadcast(offset + 1);
-            int dataLen = dataLenFromHeader(header2);
-            ArrayList<Integer> newPacket = new ArrayList<Integer>();
-            newPacket.add(header1);
-            newPacket.add(header2);
-            // Can be optimized with more variables.
-            for (int i = 0; i < dataLen; ++i) {
-                newPacket.add(rc.readBroadcast(offset + headerLen + i));
-            }
-            return newPacket;
+            dataLen = (short)(0x00ff & data.size());
         }
+        this.data = data;
+        header = new Header(rc.getID() % 0x10000,
+                            ((0xffff & targetPid) % 0xffff), // Reserved as allcast.
+                            2000,// GameConstants.ROUND_MAX_LIMIT;
+                            code, 
+                            dataLen);
+        this.rc = rc;
+        packet = encode(header, data);
+    }
+    private static ArrayList<Integer> readDataAfterHeader(RobotController rc,
+                                                          Header h) throws GameActionException {
+        assert(h.getAbsoluteOffset() >= 0);
+        ArrayList<Integer> data = new ArrayList<Integer>(h.getDataLen());
+        for (int i = 0; i < h.getDataLen(); ++i) {
+            data.add(rc.readBroadcast(h.getAbsoluteOffset() + Header.headerLen + i));
+        }
+        return data;
+    }
+    private static ArrayList<Integer> readPacketFromOffset(RobotController rc,
+                                                            int offset) throws GameActionException {
+        final Header h = new Header(rc, offset);
+        return encode(h, readDataAfterHeader(rc, h));
     }
 
-    // Accesssors
-    public int getSenderPid() {
-        return senderPid;
-    }
-    public int getTargetPid() {
-        return targetPid;
-    }
-    public int getTimeout() {
-        return timeout;
-    }
-    public int getCode() {
-        return code;
-    }
     public ArrayList<Integer> getData() {
         return data;
     }
@@ -149,19 +104,10 @@ class Msg {
         return packet;
     }
     public int getPacketLen() {
-        assert ((dataLen + headerLen) == packet.size());
-        return (dataLen + headerLen);
+        return header.getPacketLen();
     }
-    /*
-    public static int getSenderFromHeader1(int header) {
-        return senderPidFromHeader(header);
-    }
-    public static int getTargetFromHeader1(int header) {
-        return targetPidFromHeader(header);
-    }
-    */
-    public static int getPacketLenFromHeader2(int header) {
-        return dataLenFromHeader(header);
+    public Header getHeader() {
+        return header;
     }
 
     // Internal
@@ -169,57 +115,24 @@ class Msg {
     // NOTE: No checks! No transaction!
     protected void writeWithOffset(RobotController rc,
                                   int offset) throws GameActionException {
-        //System.out.println("Sending " + packet.size() + " ints over the wire...");
         for (int i = 0; i < packet.size(); ++i) {
-            //System.out.print(" <<< " +
-            //        Integer.toHexString(packet.get(i)));
             rc.broadcast(offset+i, packet.get(i));
+            //System.out.print(" <<< 0x" + Integer.toHexString(packet.get(i)));
         } 
-        //System.out.println(", " + Integer.toHexString(targetPid) + " ! {" + Integer.toHexString(senderPid) + ", ...} @ offset=" + offset);
+        //System.out.println(" @ offset=0x" + Integer.toHexString(offset));
     }
-    // TODO: Can be optimized.
-    private ArrayList<Integer> encodeHeader(int senderPid, int targetPid,
-                                            int timeout, int code, short len) {
-        ArrayList<Integer> header = new ArrayList<Integer>();
-        header.add(((0xffff & senderPid) << 16) | (0xffff & targetPid));
-        header.add((code << 8) | len);
-        return header;
-    }
-    private ArrayList<Integer> encode(int senderPid, int targetPid,
-                                      int timeout, int code, short len,
-                                      ArrayList<Integer> data) {
-        ArrayList<Integer> msg = encodeHeader(senderPid, targetPid,
-                                              timeout, code, len);
+
+    private static ArrayList<Integer> encode(Header h, ArrayList<Integer> data) {
+        ArrayList<Integer> msg = new ArrayList<Integer>();
+        msg.add(h.getHeader1());
+        msg.add(h.getHeader2());
         if (data != null) {
             msg.addAll(data);
         }
         return msg;
     }
-
-    // First header
-    private static int senderPidFromHeader(int header) {
-        return 0xffff & (header >> 16);
-    }
-    private static int targetPidFromHeader(int header) {
-        return header & 0xffff;
-    }
-    // Second header
-    private static int timeoutFromHeader(int header) {
-        return 0xffff & (header >> 16);
-    }
-    private static int codeFromHeader(int header) {
-        return (header >> 8) & 0xff;
-    }
-    private static short dataLenFromHeader(int header) {
-        return (short)(header & 0xff);
-    }
-    
     private ArrayList<Integer> dataFromMsg(short dataLen, ArrayList<Integer> msg) {
-        //try {
-        return new ArrayList<Integer>(msg.subList(headerLen, headerLen + dataLen));
-        //} catch (Exception e) {
-        //    System.err.println(e + ", could not extract packet data.");
-        //    return null;
-        //}
+        return new ArrayList<Integer>(msg.subList(Header.headerLen,
+                                                  Header.headerLen + dataLen));
     }    
 }

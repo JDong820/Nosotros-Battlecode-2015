@@ -28,4 +28,7 @@ class Tower extends Role {
             e.printStackTrace();
         }
     }
+
+    protected void handleMessage(Msg msg) {
+    }
 }

@@ -4,50 +4,59 @@ import java.util.*;
 import battlecode.common.*;
 
 class HQ extends Role {
+    int debugPingSeq = 0;
+
     int beaverCap;
-    int numBeavers = 0;
-    int numSoldiers = 0;
-    int numBashers = 0;
-    int numBarracks = 0;
+    // TODO: replace with a UnitInfo class or something
+    int numBeavers;
+    ArrayList<RobotInfo> beavers;
 
     HQ(RobotController rc) {
         super(rc);
         beaverCap = calcBeaverCap(Params.BEAVER_CAP_A,
                                   Params.BEAVER_CAP_B,
                                   Params.BEAVER_CAP_C);
+        // TODO: use constants file.
+        inboxIndex = 0x0000;
         //System.out.println("F(Params) beaverCap="+ beaverCap);
     }
 
-    void update() {
+    // Bytecode cost: ~1000
+    // 15.01T16:21
+    void updateInbox() {
         try {
-            msg = nextMsg();
+            unreadMsg = fetchNextMsg();
         } catch (GameActionException e) {
             System.err.println("Could not fetch mail.\n");
         }
     }
 
+    // Should only happen once per turn.
+    void update() {
+        //RobotInfo[] robots = rc.senseNearbyRobots(0x7fffffff, team);
+        //numBeavers = 0;
+        //beavers = new ArrayList<RobotInfo>();
+        //for (RobotInfo ri : robots) {
+        //    switch (ri.type) {
+        //        case BEAVER:
+        //            ++numBeavers;
+        //            beavers.add(ri);
+        //            break;
+        //        default:
+        //            break;
+        //    }
+        //}
+        updateInbox();
+    }
+
     void execute() {
         try {
-            /*
-            for (RobotInfo r : myRobots) {
-                RobotType type = r.type;
-                if (type == RobotType.SOLDIER) {
-                    numSoldiers++;
-                } else if (type == RobotType.BASHER) {
-                    numBashers++;
-                } else if (type == RobotType.BEAVER) {
-                    numBeavers++;
-                } else if (type == RobotType.BARRACKS) {
-                    numBarracks++;
-                }
-            }
-            */
             if (Clock.getRoundNum() % 100 == 0) {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  " + rc.getTeamOre());
             }
-            if (Clock.getRoundNum() == 300) {
-                rc.resign();
-            }
+            //if (Clock.getRoundNum() == 1000) {
+            //    rc.resign();
+            //}
 
             boolean coreReady = rc.isCoreReady();
             if (coreReady && rc.isWeaponReady()) {
@@ -63,29 +72,18 @@ class HQ extends Role {
                                 RobotType.BEAVER);
                     }
                 }
+            } else {
+                // If can't do anything, send messages.
+                //debugPing();
             }
-            while (msg != null && Clock.getBytecodesLeft() > safety) {
-                // Handle as many messages as possible.
-                switch (msg.getCode()) {
-                    case 0x00: // Do nothing.
-                        break;
-                    case 0x01: // Idle beaver.
-                        break;
-                    case 0xff: // Beaver debug ping
-                        System.out.println(msg.getTargetPid() + " ! {" +
-                                msg.getSenderPid() + ", " +
-                                msg.getTimeout() + ", " +
-                                msg.getCode() + ", " +
-                                msg.getData().size() + "}");
-
-                        break;
-                    default:
-                        break;
-                }
-                update();
+            // Handle as many messages as possible.
+            int benchMsgCount = 1;
+            while (unreadMsg != null && Clock.getBytecodesLeft() > safety) {
+                ++benchMsgCount;
+                handleMessage(unreadMsg);
+                updateInbox();
             }
-            //System.out.println("Read all messages.");
-            if (Clock.getBytecodesLeft() > 500 + safety) {
+            if (Clock.getBytecodesLeft() > safety) {
                 autotransferSupply(Params.SUPPLY_HQ_A,
                                    Params.SUPPLY_HQ_B,
                                    Params.SUPPLY_HQ_C,
@@ -93,9 +91,31 @@ class HQ extends Role {
                                    Params.SUPPLY_HQ_E,
                                    Params.SUPPLY_HQ_F);
             }
+            // Print benchmark output
+            //System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.\n" +
+            //        "Handled " + benchMsgCount + " total messages.");
         } catch (Exception e) {
-            System.err.println(e.toString() + " HQ Exception\n");
+            System.err.println(e.toString() + ": HQ Exception\n");
             e.printStackTrace();
+        }
+    }
+
+    protected void handleMessage(Msg msg) {
+        switch (msg.getHeader().getCode()) {
+            case 0x00: // Do nothing.
+                break;
+            case 0x01: // Idle beaver.
+                break;
+            case 0xff: // Debug ping
+                final Header debug = new Header(msg);
+                System.out.println(debug.getTargetPid() + " ! {" +
+                        debug.getSenderPid() + ", " +
+                        debug.getTimeout() + ", " +
+                        debug.getCode() + ", " +
+                        debug.getDataLen() + "}");
+                break;
+            default:
+                break;
         }
     }
 
@@ -117,7 +137,17 @@ class HQ extends Role {
         return beaverCap > c ? (int)beaverCap : c;
     }
 
-    protected Msg nextMsg() throws GameActionException {
-        return nextMsg(0x0000, 0x1000);
+    protected Msg fetchNextMsg() throws GameActionException {
+        return fetchNextMsg(0x0000, 0x1000);
     }
+
+    void debugPing() throws GameActionException {
+        int randIndex = (int)(rand.nextDouble()*beavers.size());
+        ArrayList<Integer> pingSeq = new ArrayList<Integer>(1);
+        pingSeq.add(debugPingSeq++);
+        send(RobotType.BEAVER,
+                new Msg(rc,
+                    beavers.get(randIndex).ID,
+                    0xff, pingSeq));
+    }            
 }
