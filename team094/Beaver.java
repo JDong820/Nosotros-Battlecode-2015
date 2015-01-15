@@ -18,14 +18,28 @@ class Beaver extends Role {
         //System.out.println("F(Params) minerFactoryCap=" + minerFactoryCap);
     }
 
+    void update() {
+        location = rc.getLocation();
+
+        try {
+            msg = nextMsg();
+        } catch (GameActionException e) {
+            System.err.println("Could not fetch mail.\n");
+        }
+    }
+
     void execute() {
         try {
-            if (rc.isCoreReady()) {
+            boolean coreReady = rc.isCoreReady();
+            if (coreReady) {
+                // TODO: add calc
                 if (rc.senseOre(location) > Params.BEAVER_ORE_THRESHOLD) {
                     rc.mine();
-                    return;
-                }
-                /*
+                    coreReady = false;
+                } else {
+                    // Do mail.
+                    send(RobotType.HQ, new Msg(rc, 0x01, null));
+                    /*
                 if (rc.getTeamOre() >= 500) {
                     Direction dirTarget = location.directionTo(base);
                     if (build(dirTarget, RobotType.MINERFACTORY)) {
@@ -33,9 +47,13 @@ class Beaver extends Role {
                     }
                 }
                 */
-                move(location.directionTo(base).opposite());
-                return;
-            } else {
+                    if (coreReady) {
+                        move(location.directionTo(base).opposite());
+                        coreReady = false;
+                    }
+                }
+            }
+            if (Clock.getBytecodesLeft() > 500 + safety) {
                 autotransferSupply(Params.SUPPLY_BEAVER_A,
                                    Params.SUPPLY_BEAVER_B,
                                    Params.SUPPLY_BEAVER_C,
@@ -77,5 +95,9 @@ class Beaver extends Role {
     public int calcMinerFactoryCap(double a, int b, int c) {
         double minerFactoryCap = a*base.distanceSquaredTo(enemy) + b;
         return minerFactoryCap  > c ? (int)minerFactoryCap : c;
+    }
+
+    protected Msg nextMsg() throws GameActionException {
+        return nextMsg(0x1000, 0x2000);
     }
 }

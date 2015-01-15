@@ -5,9 +5,10 @@ import battlecode.common.*;
 
 class HQ extends Role {
     int beaverCap;
-    // TODO: Currently unreliable count; does not remove dead.
-    // Probably use broadcasts.
-    int beaverCount = 0;
+    int numBeavers = 0;
+    int numSoldiers = 0;
+    int numBashers = 0;
+    int numBarracks = 0;
 
     HQ(RobotController rc) {
         super(rc);
@@ -18,28 +19,73 @@ class HQ extends Role {
     }
 
     void update() {
+        try {
+            msg = nextMsg();
+        } catch (GameActionException e) {
+            System.err.println("Could not fetch mail.\n");
+        }
     }
 
     void execute() {
         try {
+            /*
+            for (RobotInfo r : myRobots) {
+                RobotType type = r.type;
+                if (type == RobotType.SOLDIER) {
+                    numSoldiers++;
+                } else if (type == RobotType.BASHER) {
+                    numBashers++;
+                } else if (type == RobotType.BEAVER) {
+                    numBeavers++;
+                } else if (type == RobotType.BARRACKS) {
+                    numBarracks++;
+                }
+            }
+            */
             if (Clock.getRoundNum() % 100 == 0) {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  " + rc.getTeamOre());
             }
-            if (Clock.getRoundNum() == 1000) {
+            if (Clock.getRoundNum() == 300) {
                 rc.resign();
             }
 
-            if (rc.isCoreReady()) {
-                if (beaverCount < beaverCap) {
+            boolean coreReady = rc.isCoreReady();
+            if (coreReady && rc.isWeaponReady()) {
+                RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
+                coreReady ^= amove(enemies);
+            }
+            if (coreReady) {
+                // Make Beavers.
+                if (numBeavers < beaverCap) {
                     if (rc.getTeamOre() >= 100) {
                         //spawn(Direction.NORTH);
-                        if (spawn(directions[(int)(rand.nextDouble()*8)],
-                                  RobotType.BEAVER)) {
-                            ++beaverCount;
-                        }
+                        coreReady ^= spawn(directions[(int)(rand.nextDouble()*8)],
+                                RobotType.BEAVER);
                     }
                 }
-            } else {
+            }
+            while (msg != null && Clock.getBytecodesLeft() > safety) {
+                // Handle as many messages as possible.
+                switch (msg.getCode()) {
+                    case 0x00: // Do nothing.
+                        break;
+                    case 0x01: // Idle beaver.
+                        break;
+                    case 0xff: // Beaver debug ping
+                        System.out.println(msg.getTargetPid() + " ! {" +
+                                msg.getSenderPid() + ", " +
+                                msg.getTimeout() + ", " +
+                                msg.getCode() + ", " +
+                                msg.getData().size() + "}");
+
+                        break;
+                    default:
+                        break;
+                }
+                update();
+            }
+            //System.out.println("Read all messages.");
+            if (Clock.getBytecodesLeft() > 500 + safety) {
                 autotransferSupply(Params.SUPPLY_HQ_A,
                                    Params.SUPPLY_HQ_B,
                                    Params.SUPPLY_HQ_C,
@@ -69,5 +115,9 @@ class HQ extends Role {
     private int calcBeaverCap(double a, int b, int c) {
         double beaverCap = a*base.distanceSquaredTo(enemy) + b;
         return beaverCap > c ? (int)beaverCap : c;
+    }
+
+    protected Msg nextMsg() throws GameActionException {
+        return nextMsg(0x0000, 0x1000);
     }
 }
