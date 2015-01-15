@@ -19,8 +19,11 @@ class MinerFactory extends Role {
                 autotransferSupply();
             }
         } catch (Exception e) {
-            System.err.println(e.toString() + " Tower Exception\n");
+            System.err.println(e.toString() + ": MinerFactory Exception\n");
             e.printStackTrace();
         }
+    }
+
+    protected void handleMessage(Msg msg) {
     }
 }

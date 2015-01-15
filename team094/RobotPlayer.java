@@ -7,11 +7,7 @@ import battlecode.common.*;
 import java.util.*;
 
 public class RobotPlayer {
-
     static Role role;
-    static int lifeTurn = 0;
-    static int x;
-    static int y;
 
     private static void setCurrentRole(RobotController rc,
                                        RobotType type,
@@ -45,7 +41,7 @@ public class RobotPlayer {
                 role.update();
                 role.execute();
             } catch (Exception e) {
-                System.err.println(e + " RobotPlayer Exception");
+                System.err.println(e + ": RobotPlayer Exception");
             }
             rc.yield();
         }
