@@ -36,17 +36,18 @@ class Duck {
         RobotType.TANKFACTORY,
         RobotType.TECHNOLOGYINSTITUTE,
         RobotType.TOWER,
-        RobotType.TRAININGFIELD,
+        RobotType.TRAININGFIELD
+    };
+    static final Code[] codes = {
+        Code.INVALID, Code.DEBUG, Code.REQ, Code.ACK
     };
 
-    public static ArrayList<Integer> val2al(int i) {
-        ArrayList<Integer> tmp = new ArrayList<Integer>(1);
-        tmp.add(i);
-        return tmp;
-    }
-    public static ArrayList<Integer> val2al(RobotType type) {
+
+
+
+    public static int val2i(RobotType type) {
         final int typeval;
-        switch(type) {
+        switch (type) {
             case AEROSPACELAB:
                 typeval = 0;
                 break;
@@ -112,46 +113,88 @@ class Duck {
                 break;
             default:
                 System.err.println("Sad duck.");
-                return null;
+                return -1;
         }
-        return val2al(typeval);
+        return typeval;
     }
-    public static ArrayList<Integer> val2al(MapLocation loc) {
+    public static int val2i(MapLocation loc) {
         assert(loc.x < 0xffff && loc.y < 0xffff);
-        return val2al((loc.x << 16) | (0xffff & loc.y));
+        return (loc.x << 16) | (0xffff & loc.y);
+    }
+    public static int val2i(Direction d) {
+        switch (d) {
+            case NORTH:
+                return 0;
+            case NORTH_EAST:
+                return 1;
+            case EAST:
+                return 2;
+            case SOUTH_EAST:
+                return 3;
+            case SOUTH:
+                return 4;
+            case SOUTH_WEST:
+                return 5;
+            case WEST:
+                return 6;
+            case NORTH_WEST:
+                return 7;
+            default:
+                System.err.println("Sad duck.");
+                return -1;
+        }
+    }
+    public static int val2i(Code c) {
+        switch (c) {
+            case INVALID:
+                return 0x00;
+            case DEBUG:
+                return 0x01;
+            case REQ:
+                return 0x02;
+            case ACK:
+                return 0x03;
+            default:
+                System.err.println("Sad duck.");
+                return -1;
+        }
     }
 
-    public static MapLocation i2ml(int i) {
-        return new MapLocation(i >> 16, 0xffff & i);
+    public static ArrayList<Integer> val2ali(int i) {
+        ArrayList<Integer> tmp = new ArrayList<Integer>(1);
+        tmp.add(i);
+        return tmp;
     }
+    public static ArrayList<Integer> val2ali(RobotType type) {
+        return val2ali(val2i(type));
+    }
+    public static ArrayList<Integer> val2ali(MapLocation loc) {
+        return val2ali(val2i(loc));
+    }
+
+    public static ArrayList<Task> t2alt(Task t) {
+        ArrayList<Task> tmp = new ArrayList<Task>(1);
+        tmp.add(t);
+        return tmp;
+    }
+
     public static RobotType i2rt(int enumOrd) {
         // Smells so good...
         return rt[enumOrd];
     }
-    public static int d2i(Direction d) {
-        switch(d) {
-        case NORTH:
-            return 0;
-        case NORTH_EAST:
-            return 1;
-        case EAST:
-            return 2;
-        case SOUTH_EAST:
-            return 3;
-        case SOUTH:
-            return 4;
-        case SOUTH_WEST:
-            return 5;
-        case WEST:
-            return 6;
-        case NORTH_WEST:
-            return 7;
-        default:
-            System.err.println("Sad duck.");
-            return -1;
-        }
+    public static MapLocation i2ml(int i) {
+        return new MapLocation(i >> 16, 0xffff & i);
     }
     public static Direction i2d(int enumOrd) {
         return directions[enumOrd];
+    }
+    public static Code i2code(int enumOrd) {
+        return codes[enumOrd];
+    }
+
+    public static ArrayList<RobotType> rt2alrt(RobotType type) {
+        ArrayList<RobotType> tmp = new ArrayList<RobotType>(1);
+        tmp.add(type);
+        return tmp;
     }
 }

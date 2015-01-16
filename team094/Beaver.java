@@ -20,14 +20,6 @@ class Beaver extends Role {
         //System.out.println("F(Params) minerFactoryCap=" + minerFactoryCap);
     }
 
-    void updateInbox() {
-        try {
-            unreadMsg = fetchNextMsg();
-        } catch (GameActionException e) {
-            System.err.println("Could not fetch mail.");
-        }
-    }
-
     void update() {
         location = rc.getLocation();
         coreReady = rc.isCoreReady();
@@ -47,11 +39,12 @@ class Beaver extends Role {
                 //send(RobotType.HQ, new Msg(rc, 0x01, null));
             }
             // Handle as many messages as possible.
-            int benchMsgCount = 1;
+            /*
             while (unreadMsg != null && Clock.getBytecodesLeft() > safety) {
                 handleMessage(unreadMsg);
                 update();
             }
+            */
             if (coreReady) {
                 coreReady ^= move(location.directionTo(base).opposite());
             }
@@ -65,9 +58,7 @@ class Beaver extends Role {
             }
             if (p.BENCHMARKING_ON) {
                 System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.");
-                if (benchMsgCount > 0) {
-                    System.out.println("Handled " + benchMsgCount + " total messages.");
-                }
+                System.out.println("Received " + messages.size() + " total messages this turn.");
             }
         } catch (Exception e) {
             System.err.println(e.toString() + " Beaver Exception\n");
@@ -77,9 +68,7 @@ class Beaver extends Role {
     
     protected void handleMessage(Msg msg) throws GameActionException {
         switch (msg.getHeader().getCode()) {
-            case 0x01:
-                break;
-            case 0x02: // Request to build
+            case REQ: // Request to build
                 if (coreReady) {
                     // Protocol
                     // {building, desired_location}
@@ -89,7 +78,7 @@ class Beaver extends Role {
                     // Check if we are fit to build.
                     if (true) {
                         // Ack
-                        send(RobotType.HQ, new Msg(rc, 0x02, Duck.val2al(location)));
+                        send(RobotType.HQ, Code.ACK, Duck.val2ali(location));
                     }
                     
 
@@ -102,7 +91,7 @@ class Beaver extends Role {
                             building + ", loc: " + loc + "}} (REQ)");
                 }
                 break;
-            case 0xff: // Debug ping
+            case DEBUG: // Debug ping
             default:
                 final Header debug = new Header(msg);
                 System.out.println(debug.getTargetPid() + " ! {" +
@@ -119,7 +108,7 @@ class Beaver extends Role {
     boolean move(Direction d) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
-            Direction trialDir = Duck.i2d((Duck.d2i(d)+offset+8)%8);
+            Direction trialDir = Duck.i2d((Duck.val2i(d)+offset+8)%8);
             if (rc.canMove(trialDir)) {
                 rc.move(trialDir);
                 return true;
@@ -131,7 +120,7 @@ class Beaver extends Role {
     boolean build(Direction d, RobotType building) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
-            Direction trialDir = Duck.i2d((Duck.d2i(d)+offset+8)%8);
+            Direction trialDir = Duck.i2d((Duck.val2i(d)+offset+8)%8);
             if (rc.canMove(trialDir)) {
                 rc.build(trialDir, building);
                 return true;

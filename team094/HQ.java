@@ -21,22 +21,15 @@ class HQ extends Role {
         p = new Params();
         p.BENCHMARKING_ON = true;
 
-        task = new Task(new BuildAction(rc, RobotType.BEAVER));
+        //SearchAction s = new SearchAction(this,
+        //        RobotType.BEAVER, SearchAction.Status.IDLE);
+        BuildAction b = new BuildAction(this, RobotType.BEAVER);
+        task = new Task(b);
         goalBeaverCount = calcBeaverCap(p, baseToEnemySquared);
 
         // TODO: use constants file.
         inboxIndex = 0x0000;
         //System.out.println("F(Params) goalBeaverCount="+ goalBeaverCount);
-    }
-
-    // Bytecode cost: 400-1000
-    // 15.01T16:21
-    void updateInbox() {
-        try {
-            unreadMsg = fetchNextMsg();
-        } catch (GameActionException e) {
-            System.err.println("Could not fetch mail.\n");
-        }
     }
 
     // Should only get called once per turn.
@@ -70,25 +63,38 @@ class HQ extends Role {
             if (Clock.getRoundNum() % 100 == 0) {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  " + rc.getTeamOre());
             }
-            if (Clock.getRoundNum() == 1000) {
+            if (Clock.getRoundNum() == 23) {
                 rc.resign();
             }
 
-            // Set task to the first actionable task.
-            task.reset();
-            while (Clock.getBytecodesLeft() > 500 + safety) {
-                int benchBytecodesBefore = Clock.getBytecodesLeft();
-                
-                Action action = task.getAction();
-                if (action.canExecute()) {
-                    action.enact();
+            if (coreReady && rc.isWeaponReady()) {
+                RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
+                coreReady ^= amove(enemies);
+            }
+
+            if (task.reset()) {
+                System.out.println("Starting tasks.");
+                while (Clock.getBytecodesLeft() > 500 + safety) {
+                    int benchBytecodesBefore = Clock.getBytecodesLeft();
+
+
+                    Action curr = task.getCurrent();
+                    if (curr == null) {
+                        System.out.println("Reached end of tasks.");
+                        // If there are no tasks to do,
+                        // go back to the beginning.
+                        if (!task.reset()) break;
+                    }
+                    //assert (curr.canAct());
+                    System.out.println("Executing action: " + curr);
+                    curr.act();
+                    task.nextActionable();
+
+
+                    benchBytecodes.add(benchBytecodesBefore - Clock.getBytecodesLeft());
                 }
-                 
-                // Keeps iterating until task gets to the root node (victory?).
-                if (!task.nextActionableTask()) break;
-               
-                // Add bytecodes used per loop.
-                benchBytecodes.add(benchBytecodesBefore - Clock.getBytecodesLeft());
+            } else {
+                System.out.println("HQ has no tasks to execute!");
             }
             if (Clock.getBytecodesLeft() > safety) {
                 autotransferSupply(p.SUPPLY_HQ_A,
@@ -99,30 +105,6 @@ class HQ extends Role {
                                    p.SUPPLY_HQ_F);
             }
             /*
-            if (coreReady && rc.isWeaponReady()) {
-                RobotInfo[] enemies = rc.senseNearbyRobots(range, enemyTeam);
-                coreReady ^= amove(enemies);
-            }
-            if (coreReady) {
-                // Make Beavers.
-                if (numBeavers < goalBeaverCount) {
-                    if (rc.getTeamOre() >= 100) {
-                        //spawn(Direction.NORTH);
-                        coreReady ^= spawn(Duck.i2d((int)(rand.nextDouble()*8)),
-                                RobotType.BEAVER);
-                    }
-                }
-            }
-            // Check if done with build order.
-            if (boIndex < bo.buildings.size()) {
-                RobotType nextBuilding = bo.buildings.get(boIndex);
-                if (nextBuilding != null && nextBuilding.oreCost <= rc.getTeamOre()) {
-                    ArrayList<Integer> data = Duck.val2al(nextBuilding);
-                    // TODO: implement loc chooser.
-                    data.addAll(Duck.val2al(base.add(0, 1)));
-                    send(RobotType.BEAVER, new Msg(rc, 0x02, data));
-                }
-            }
             // Handle as many messages as possible.
             int benchMsgCount = 0;
             while (unreadMsg != null && Clock.getBytecodesLeft() > safety) {
@@ -130,7 +112,6 @@ class HQ extends Role {
                 handleMessage(unreadMsg);
                 updateInbox();
             }
-            
             */
             // Benchmarking
             if (p.BENCHMARKING_ON) {
@@ -142,12 +123,15 @@ class HQ extends Role {
                     }
                     benchAverage = benchSum.doubleValue() / benchBytecodes.size();
                 }
-                System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.");
-                System.out.println("Average loop cost: " + benchAverage);
-                System.out.println("" + benchBytecodes); // TODO: fix
+                System.out.print("Turn stats:\n");
+                System.out.print("Bytecodes used: " + (10000 - Clock.getBytecodesLeft()));
+                if (benchAverage > 0) 
+                    System.out.print(". Average loop cost: " + benchAverage +
+                            ". Loops executed: " + benchBytecodes.size() + ".");
                 if (benchMsgCount > 0) {
-                    System.out.println("Handled " + benchMsgCount + " total messages.");
+                    System.out.print("\nHandled " + benchMsgCount + " total messages.");
                 }
+                System.out.print("\n");
             }
         } catch (Exception e) {
             System.err.println(e.toString() + ": HQ Exception\n");
@@ -157,7 +141,7 @@ class HQ extends Role {
 
     protected void handleMessage(Msg msg) throws GameActionException {
         switch (msg.getHeader().getCode()) {
-            case 0x02: // ACK can build.
+            case ACK: // ACK can build.
                 // Protocol
                 // {builder_location}
                 final MapLocation loc = Duck.i2ml(msg.getData().get(0));
@@ -169,7 +153,7 @@ class HQ extends Role {
                             debug2.getCode() + ", " +
                             debug2.getDataLen() + ", {loc: " + loc + "}} (ACK)");
                 break;
-            case 0xff: // Debug ping
+            case DEBUG: // Debug ping
             default:
                 final Header debug = new Header(msg);
                 System.out.println(debug.getTargetPid() + " ! {" +
@@ -186,7 +170,7 @@ class HQ extends Role {
     boolean spawn(Direction d, RobotType type) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
-            Direction trialDir = Duck.i2d((Duck.d2i(d)+offset+8)%8);
+            Direction trialDir = Duck.i2d((Duck.val2i(d)+offset+8)%8);
             if (rc.canSpawn(trialDir, type)) {
                 rc.spawn(trialDir, type);
                 return true;

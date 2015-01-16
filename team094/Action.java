@@ -7,21 +7,27 @@ import battlecode.common.*;
 // {buildAction, [Arg]}
 // {trainAction, [Arg]}
 // {analyzeAction, [Arg]}
-abstract class Action{
-    final RobotController agent;
+abstract class Action {
+    final Role agent;
 
-    Integer attempted = null; // Turn attempted
     boolean completed = false;
 
-    // Don't do this.
-    Action(RobotController rc) {
-        agent = rc;
+    static final int BCOST_SEND = 500;
     
-        // This will cause it to be auto-removed.
-        completed = true;
+    Action(Role robot) {
+        agent = robot;
     }
 
+   
+    public boolean isComplete() {
+        return completed;
+    }
 
-    abstract public boolean canExecute();
-    abstract public void enact() throws GameActionException;
+    abstract public boolean canAct();
+    abstract public void act() throws GameActionException;
+
+    //abstract public void reset(); // Does not affect `completed`.
+    //abstract public boolean canExecute();
+    //abstract public void enact() throws GameActionException;
+    //abstract public ArrayList<Task> getSubtasks();
 }

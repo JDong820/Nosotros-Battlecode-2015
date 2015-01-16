@@ -20,7 +20,7 @@ class Header {
     final int senderPid; // From:
     final int targetPid; // To:
     final int timeout;
-    final int code;
+    final Code code;
     final short dataLen;
 
     static final byte headerLen = 2;
@@ -34,7 +34,7 @@ class Header {
         senderPid = -1;
         targetPid = -1;
         timeout = -1;
-        code = -1;
+        code = Code.INVALID;
         dataLen = -1;
     }
 
@@ -98,7 +98,7 @@ class Header {
     public int getTimeout() {
         return timeout;
     }
-    public int getCode() {
+    public Code getCode() {
         return code;
     }
     public short getDataLen() {
@@ -160,8 +160,8 @@ class Header {
     private static int timeoutFromHeader(int header) {
         return 0xffff & (header >> 16);
     }
-    private static int codeFromHeader(int header) {
-        return (header >> 8) & 0xff;
+    private static Code codeFromHeader(int header) {
+        return Duck.i2code((header >> 8) & 0xff);
     }
     private static short dataLenFromHeader(int header) {
         return (short)(header & 0xff);

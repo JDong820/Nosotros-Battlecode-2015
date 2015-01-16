@@ -3,44 +3,39 @@ import battlecode.common.*;
 import java.util.*;
 
 // TODO: use the Header class.
-class Msg {
-    // Packet data; can you feel the immutable state?
+class Msg { 
     final Header header;
     final ArrayList<Integer> data;
 
-    final RobotController rc;
     final ArrayList<Integer> packet;
 
     // Decode packet
-    Msg(RobotController rc, ArrayList<Integer> msg) {
+    Msg(int senderId, ArrayList<Integer> msg) {
         if (msg == null) {
             header = null;
             data = null;
 
-            this.rc = null;
             packet = null;
         } else {
             header = new Header(msg.get(0), msg.get(1));
             data = dataFromMsg(header.getDataLen(), msg);
 
-            this.rc = rc;
             packet = msg;
         }
     }
     // Read
     Msg(RobotController rc, int offset) throws GameActionException{
-        this(rc, readPacketFromOffset(rc, offset)); 
+        this(rc.getID(), readPacketFromOffset(rc, offset)); 
     }
     // Read from header
     Msg(RobotController rc, Header h) throws GameActionException{
         header = h;
         data = readDataAfterHeader(rc, h);
 
-        this.rc = rc;
         packet = encode(h, data);
     }
     // Shout
-    Msg(RobotController rc, int code, ArrayList<Integer> data) {
+    Msg(int senderId, int code, ArrayList<Integer> data) {
         final short dataLen;
         if (data == null) {
             dataLen = 0;
@@ -52,16 +47,15 @@ class Msg {
             dataLen = (short)(0x00ff & data.size());
         }
         this.data = data;
-        header = new Header(rc.getID() % 0x10000,
+        header = new Header(senderId % 0x10000,
                             0xffff, // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
                             code, 
                             dataLen);
-        this.rc = rc;
         packet = encode(header, data);
     }
     // Whisper
-    Msg(RobotController rc,
+    Msg(int senderId,
         int targetPid, int code, ArrayList<Integer> data) {
         final short dataLen;
         if (data == null) {
@@ -74,12 +68,11 @@ class Msg {
             dataLen = (short)(0x00ff & data.size());
         }
         this.data = data;
-        header = new Header(rc.getID() % 0x10000,
+        header = new Header(senderId % 0x10000,
                             ((0xffff & targetPid) % 0xffff), // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
                             code, 
                             dataLen);
-        this.rc = rc;
         packet = encode(header, data);
     }
 

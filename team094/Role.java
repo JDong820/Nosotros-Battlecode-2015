@@ -1,5 +1,6 @@
 package team094;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Random;
 import battlecode.common.*;
 
 abstract class Role {
@@ -19,11 +20,13 @@ abstract class Role {
     boolean coreReady; // Update cost: 10
     boolean weaponReady; // Update cost: 10
 
-    Msg unreadMsg;
+    ArrayList<Msg> messages;
     int inboxIndex; // Absolute index.
+
 
     // Try to always have at least this many bytecodes remaining.
     final int safety = 1000;
+
 
     Role(RobotController rc) {
         this.rc = rc;
@@ -40,13 +43,44 @@ abstract class Role {
         location = rc.getLocation();
     }
 
+
+    public int getID() {
+        return id;
+    }
+ 
+    abstract Msg fetchNextMsg() throws GameActionException;
     abstract void update();
     abstract void execute();
 
     abstract protected void handleMessage(Msg m) throws GameActionException;
 
-    
-    protected boolean send(RobotType targetType, Msg msg) throws GameActionException {
+    protected void updateInbox() {
+        try {
+            messages = new ArrayList<Msg>();
+            Msg tmp = fetchNextMsg();
+            while (tmp != null) {
+                messages.add(tmp);
+                tmp = fetchNextMsg();
+            }
+        } catch (GameActionException e) {
+            System.err.println("Could not fetch mail.");
+        }
+    }   
+    protected ArrayList<Msg> removeMail(MailFilter f) {
+        ArrayList<Msg> results = new ArrayList<Msg>(messages.size());
+        for (int i = messages.size() - 1; i >= 0; --i) {
+            if (f.pass(messages.get(i))) {
+                results.add(messages.remove(i));
+            }
+        }
+        return results;
+    }
+    protected boolean send(RobotType targetType,
+            Code c, ArrayList<Integer> data) throws GameActionException {
+        Msg m = new Msg(rc.getID(), Duck.val2i(c), data);
+        return send(targetType, m);
+    }
+    private boolean send(RobotType targetType, Msg msg) throws GameActionException {
         // dataLen is a byte, so max packet size is 0xff+2
         if (0 < msg.getPacketLen() && msg.getPacketLen() <= 0x101) {
             // "Transaction" semi-guarantee
@@ -271,6 +305,6 @@ abstract class Role {
     public void debugPing(RobotType type, int id, int seq) throws GameActionException {
         ArrayList<Integer> pingSeq = new ArrayList<Integer>(1);
         pingSeq.add(seq);
-        send(type, new Msg(rc, id, 0xff, pingSeq));
+        send(type, new Msg(this.id, id, 0xff, pingSeq));
     }
 }
