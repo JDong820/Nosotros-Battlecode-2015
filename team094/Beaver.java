@@ -5,16 +5,16 @@ import java.util.*;
 import battlecode.common.*;
 
 class Beaver extends Role {
-    int minerFactoryCap;
-    // TODO: Currently unreliable count; does not remove dead.
-    // Probably use broadcasts.
-    int minerFactoryCount = 0;
+    final Params p;
+    //int goalMinerFactoryCount;
+
+    boolean coreReady;
 
     Beaver(RobotController rc) {
         super(rc);
-        minerFactoryCap = calcMinerFactoryCap(Params.MINERFACTORY_CAP_A,
-                                              Params.MINERFACTORY_CAP_B,
-                                              Params.MINERFACTORY_CAP_C);
+        p = new Params();
+        //goalMinerFactoryCount = calcMinerFactoryCap(p, baseToEnemySquared);
+
         // TODO: use constants file.
         inboxIndex = 0x1000;
         //System.out.println("F(Params) minerFactoryCap=" + minerFactoryCap);
@@ -30,21 +30,24 @@ class Beaver extends Role {
 
     void update() {
         location = rc.getLocation();
+        coreReady = rc.isCoreReady();
+        weaponReady = rc.isWeaponReady();
+
         updateInbox();
     }
 
     void execute() {
         try {
-            boolean coreReady = rc.isCoreReady();
-                // TODO: add calc
-            if (coreReady && rc.senseOre(location) > Params.BEAVER_ORE_THRESHOLD) {
+            // TODO: add calc from map analysis.
+            if (coreReady && rc.senseOre(location) > p.BEAVER_ORE_THRESHOLD) {
                     rc.mine();
                     coreReady = false;
             } else {
                 // If not mining, tell HQ idle.
-                send(RobotType.HQ, new Msg(rc, 0x01, null));
+                //send(RobotType.HQ, new Msg(rc, 0x01, null));
             }
             // Handle as many messages as possible.
+            int benchMsgCount = 1;
             while (unreadMsg != null && Clock.getBytecodesLeft() > safety) {
                 handleMessage(unreadMsg);
                 update();
@@ -52,13 +55,19 @@ class Beaver extends Role {
             if (coreReady) {
                 coreReady ^= move(location.directionTo(base).opposite());
             }
-            if (Clock.getBytecodesLeft() > 500 + safety) {
-                autotransferSupply(Params.SUPPLY_BEAVER_A,
-                                   Params.SUPPLY_BEAVER_B,
-                                   Params.SUPPLY_BEAVER_C,
-                                   Params.SUPPLY_BEAVER_D,
-                                   Params.SUPPLY_BEAVER_E,
-                                   Params.SUPPLY_BEAVER_F);
+            if (Clock.getBytecodesLeft() > safety) {
+                autotransferSupply(p.SUPPLY_BEAVER_A,
+                                   p.SUPPLY_BEAVER_B,
+                                   p.SUPPLY_BEAVER_C,
+                                   p.SUPPLY_BEAVER_D,
+                                   p.SUPPLY_BEAVER_E,
+                                   p.SUPPLY_BEAVER_F);
+            }
+            if (p.BENCHMARKING_ON) {
+                System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.");
+                if (benchMsgCount > 0) {
+                    System.out.println("Handled " + benchMsgCount + " total messages.");
+                }
             }
         } catch (Exception e) {
             System.err.println(e.toString() + " Beaver Exception\n");
@@ -66,11 +75,35 @@ class Beaver extends Role {
         }
     }
     
-    protected void handleMessage(Msg msg) {
+    protected void handleMessage(Msg msg) throws GameActionException {
         switch (msg.getHeader().getCode()) {
             case 0x01:
                 break;
+            case 0x02: // Request to build
+                if (coreReady) {
+                    // Protocol
+                    // {building, desired_location}
+                    final RobotType building = Duck.i2rt(msg.getData().get(0));
+                    final MapLocation loc = Duck.i2ml(msg.getData().get(1));
+
+                    // Check if we are fit to build.
+                    if (true) {
+                        // Ack
+                        send(RobotType.HQ, new Msg(rc, 0x02, Duck.val2al(location)));
+                    }
+                    
+
+                    final Header debug1 = new Header(msg);
+                    System.out.println(debug1.getTargetPid() + " ! {" +
+                            debug1.getSenderPid() + ", " +
+                            debug1.getTimeout() + ", " +
+                            debug1.getCode() + ", " +
+                            debug1.getDataLen() + ", {building: " +
+                            building + ", loc: " + loc + "}} (REQ)");
+                }
+                break;
             case 0xff: // Debug ping
+            default:
                 final Header debug = new Header(msg);
                 System.out.println(debug.getTargetPid() + " ! {" +
                         debug.getSenderPid() + ", " +
@@ -79,8 +112,6 @@ class Beaver extends Role {
                         debug.getDataLen() + ", {seq: 0x" +
                         Integer.toHexString(msg.getData().get(0)) + "}}");
                 break;
-            default:
-                break;
         }
     }
 
@@ -88,7 +119,7 @@ class Beaver extends Role {
     boolean move(Direction d) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
-            Direction trialDir = directions[(directionToInt(d)+offset+8)%8];
+            Direction trialDir = Duck.i2d((Duck.d2i(d)+offset+8)%8);
             if (rc.canMove(trialDir)) {
                 rc.move(trialDir);
                 return true;
@@ -100,7 +131,7 @@ class Beaver extends Role {
     boolean build(Direction d, RobotType building) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
-            Direction trialDir = directions[(directionToInt(d)+offset+8)%8];
+            Direction trialDir = Duck.i2d((Duck.d2i(d)+offset+8)%8);
             if (rc.canMove(trialDir)) {
                 rc.build(trialDir, building);
                 return true;
@@ -109,9 +140,9 @@ class Beaver extends Role {
         return false;
     }
 
-    public int calcMinerFactoryCap(double a, int b, int c) {
-        double minerFactoryCap = a*base.distanceSquaredTo(enemy) + b;
-        return minerFactoryCap  > c ? (int)minerFactoryCap : c;
+    public static int calcMinerFactoryCap(Params p, int d) {
+        double goal = p.GOAL_MINERFACTORIES_A*d;
+        return goal > p.GOAL_MINERFACTORIES_B ? (int)goal : p.GOAL_MINERFACTORIES_B;
     }
 
     protected Msg fetchNextMsg() throws GameActionException {

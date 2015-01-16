@@ -82,6 +82,22 @@ class Msg {
         this.rc = rc;
         packet = encode(header, data);
     }
+
+
+    public ArrayList<Integer> getData() {
+        return data;
+    }
+    public ArrayList<Integer> getPacket() {
+        return packet;
+    }
+    public int getPacketLen() {
+        return header.getPacketLen();
+    }
+    public Header getHeader() {
+        return header;
+    }
+
+    
     private static ArrayList<Integer> readDataAfterHeader(RobotController rc,
                                                           Header h) throws GameActionException {
         assert(h.getAbsoluteOffset() >= 0);
@@ -97,21 +113,6 @@ class Msg {
         return encode(h, readDataAfterHeader(rc, h));
     }
 
-    public ArrayList<Integer> getData() {
-        return data;
-    }
-    public ArrayList<Integer> getPacket() {
-        return packet;
-    }
-    public int getPacketLen() {
-        return header.getPacketLen();
-    }
-    public Header getHeader() {
-        return header;
-    }
-
-    // Internal
-    // Use this to build a send function.
     // NOTE: No checks! No transaction!
     protected void writeWithOffset(RobotController rc,
                                   int offset) throws GameActionException {

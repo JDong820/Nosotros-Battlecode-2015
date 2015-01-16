@@ -3,30 +3,24 @@ import java.util.*;
 import battlecode.common.*;
 
 abstract class Role {
-    static final Direction[] directions = {Direction.NORTH,
-                                           Direction.NORTH_EAST,
-                                           Direction.EAST,
-                                           Direction.SOUTH_EAST,
-                                           Direction.SOUTH,
-                                           Direction.SOUTH_WEST,
-                                           Direction.WEST,
-                                           Direction.NORTH_WEST
-                                          };
     final RobotController rc;
     final int id;
     final Team team;
     final Team enemyTeam;
     final MapLocation base;
     final MapLocation enemy;
-    MapLocation location;
     final int range;
+    final int baseToEnemySquared;
 
     final Random rand;
 
-    // Mailbox 
+    // Status
+    MapLocation location; // Update cost: 1
+    boolean coreReady; // Update cost: 10
+    boolean weaponReady; // Update cost: 10
+
     Msg unreadMsg;
-    // Absolute index.
-    int inboxIndex;
+    int inboxIndex; // Absolute index.
 
     // Try to always have at least this many bytecodes remaining.
     final int safety = 1000;
@@ -38,42 +32,20 @@ abstract class Role {
         enemyTeam = team.opponent();
         base = rc.senseHQLocation();
         enemy = rc.senseEnemyHQLocation();
-        location = rc.getLocation();
         range = rc.getType().attackRadiusSquared;
+        baseToEnemySquared = base.distanceSquaredTo(enemy);
 
         rand = new Random(id);
+
+        location = rc.getLocation();
     }
 
     abstract void update();
     abstract void execute();
 
-    abstract protected void handleMessage(Msg m);
+    abstract protected void handleMessage(Msg m) throws GameActionException;
 
-    static int directionToInt(Direction d) {
-        switch(d) {
-        case NORTH:
-            return 0;
-        case NORTH_EAST:
-            return 1;
-        case EAST:
-            return 2;
-        case SOUTH_EAST:
-            return 3;
-        case SOUTH:
-            return 4;
-        case SOUTH_WEST:
-            return 5;
-        case WEST:
-            return 6;
-        case NORTH_WEST:
-            return 7;
-        default:
-            System.err.println("Unknown direction used. What?");
-            return -1;
-        }
-    }
-
-
+    
     protected boolean send(RobotType targetType, Msg msg) throws GameActionException {
         // dataLen is a byte, so max packet size is 0xff+2
         if (0 < msg.getPacketLen() && msg.getPacketLen() <= 0x101) {
@@ -294,5 +266,11 @@ abstract class Role {
         for (int i = stop - 1; i >= start; --i) {
             rc.broadcast(i, 0);
         }
+    }
+
+    public void debugPing(RobotType type, int id, int seq) throws GameActionException {
+        ArrayList<Integer> pingSeq = new ArrayList<Integer>(1);
+        pingSeq.add(seq);
+        send(type, new Msg(rc, id, 0xff, pingSeq));
     }
 }

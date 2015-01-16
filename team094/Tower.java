@@ -4,12 +4,16 @@ import java.util.*;
 import battlecode.common.*;
 
 class Tower extends Role {
+    final Params p;
 
     Tower(RobotController rc) {
         super(rc);
+        p = new Params();
     }
 
     void update() {
+        coreReady = rc.isCoreReady();
+        weaponReady = rc.isWeaponReady();
     }
 
     void execute() {
@@ -20,7 +24,7 @@ class Tower extends Role {
                 coreReady ^= amove(enemies);
             }
             // This code smells bad.
-            if (rc.getSupplyLevel() > Params.TOWER_SUPPLY_THRESHOLD) {
+            if (rc.getSupplyLevel() > p.TOWER_SUPPLY_THRESHOLD) {
                 autotransferSupply();
             }
         } catch (Exception e) {
