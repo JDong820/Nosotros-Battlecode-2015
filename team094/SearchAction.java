@@ -21,10 +21,23 @@ class SearchAction extends Action {
     ArrayList<Msg> results = null;
 
 
-    SearchAction(Role robot, RobotType targetType, Status targetStatus) {
+    // Code possibilities:
+    // 0xffff ANY
+    // 0x0000 IDLE
+    // TODO: Pls not more classes
+    SearchAction(Role robot, RobotType targetType, int code) {
         super(robot);
         type = targetType;
-        status = targetStatus;
+        switch (code) {
+            case 0xffff:
+                status = Status.ANY;
+                break;
+            case 0x0000:
+            default:
+                status = Status.IDLE;
+                break;
+        }
+        
     }
 
    

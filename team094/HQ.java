@@ -19,12 +19,15 @@ class HQ extends Role {
     HQ(RobotController rc) {
         super(rc);
         p = new Params();
-        p.BENCHMARKING_ON = true;
+        //p.BENCHMARKING_ON = true;
 
         //SearchAction s = new SearchAction(this,
-        //        RobotType.BEAVER, SearchAction.Status.IDLE);
+        //        RobotType.BEAVER, 0x0000); // Select IDLE
         BuildAction b = new BuildAction(this, RobotType.BEAVER);
-        task = new Task(b);
+        task = new Task();
+        task.addSerial(b);
+        //task.addSerial(s);
+
         goalBeaverCount = calcBeaverCap(p, baseToEnemySquared);
 
         // TODO: use constants file.
@@ -63,7 +66,7 @@ class HQ extends Role {
             if (Clock.getRoundNum() % 100 == 0) {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  " + rc.getTeamOre());
             }
-            if (Clock.getRoundNum() == 23) {
+            if (Clock.getRoundNum() == 3) {
                 rc.resign();
             }
 
@@ -78,7 +81,7 @@ class HQ extends Role {
                     int benchBytecodesBefore = Clock.getBytecodesLeft();
 
 
-                    Action curr = task.getCurrent();
+                    Task curr = task.getCurrent();
                     if (curr == null) {
                         System.out.println("Reached end of tasks.");
                         // If there are no tasks to do,
@@ -86,8 +89,8 @@ class HQ extends Role {
                         if (!task.reset()) break;
                     }
                     //assert (curr.canAct());
-                    System.out.println("Executing action: " + curr);
-                    curr.act();
+                    System.out.println("Executing action: " + curr.getAction());
+                    curr.getAction().act();
                     task.nextActionable();
 
 
@@ -134,8 +137,8 @@ class HQ extends Role {
                 System.out.print("\n");
             }
         } catch (Exception e) {
-            System.err.println(e.toString() + ": HQ Exception\n");
-            e.printStackTrace();
+            System.err.println(e.toString() + ": HQ Exception");
+            System.err.println(e.getStackTrace()[0] + "\n");
         }
     }
 

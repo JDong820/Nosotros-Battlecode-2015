@@ -1,6 +1,5 @@
 // Each robot can execute its own actions.
 package team094;
-import java.util.ArrayList;
 import battlecode.common.*;
 
 // Maybe make abstract to customize params.
@@ -25,9 +24,4 @@ abstract class Action {
 
     abstract public boolean canAct();
     abstract public void act() throws GameActionException;
-
-    //abstract public void reset(); // Does not affect `completed`.
-    //abstract public boolean canExecute();
-    //abstract public void enact() throws GameActionException;
-    //abstract public ArrayList<Task> getSubtasks();
 }

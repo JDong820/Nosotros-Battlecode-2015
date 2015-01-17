@@ -51,40 +51,6 @@ class BuildAction extends Action {
     }
 }
 /*
-class BuildAction extends Action {
-    boolean attempted = false;
-
-    public final RobotType type;
-    Integer buildCount;
-
-    BuildAction(RobotController rc, RobotType arg, int count) {
-        super(rc);
-        assert(count > 0);
-        type = arg;
-        buildCount = count;
-    }
-    BuildAction(RobotController rc, RobotType arg) {
-        this(rc, arg, 1);
-    }
-
-
-    public void reset() {
-        attempted = false;
-    }
-    public boolean canExecute() {
-        return (agent.getTeamOre() >= type.oreCost && agent.isCoreReady());
-    }
-    public void enact() throws GameActionException {
-        System.out.println("Executing task: " + this);
-        attempted = true;
-        if (spawn(Direction.NORTH, type)) {
-            --buildCount;
-        }
-        if (buildCount == 0) {
-            System.out.println("Completed action: " + this);
-            completed = true;
-        }
-    }
     public ArrayList<Task> getSubtasks() {
         switch (type) {
             case BEAVER:
@@ -97,8 +63,4 @@ class BuildAction extends Action {
                 return null;
         }
     }
-
-
-
-}
-*/
+    */
