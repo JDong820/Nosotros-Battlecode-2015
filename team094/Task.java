@@ -1,37 +1,51 @@
 package team094;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Queue;
 import battlecode.common.*;
 
 class Task {
-    final Task parent;
+    Task parent;
     final Action action;
+    // Internal debugging
+    final int creationTurn;
 
     ArrayList<Task> children = null;
 
     int nodeIndex = 0;
     int subtreeSize = 1; // Subtree includes this.
 
-    Task() { // Root node constructor.
-        parent = null;
-        action = null; // Eventually replace this with a WinAction.
-    }
+
     Task(Task p, Action a) {
         parent = p;
-        action = a;
+        if (a != null)
+            action = a.copy(); // TODO: Dubious copy
+        else
+            action = null;
+        creationTurn = Clock.getRoundNum();
+    }
+    Task(Action a) {
+        this(null, a);
+    }
+    Task() { // Root node constructor.
+        this(null, null); // Eventually replace this with a WinAction.
     }
 
 
     public Task getParent() {
         return parent;
     }
-    public ArrayList<Task> getChildren() {
-        return children;
-    }
     public Action getAction() {
         return action;
     }
+    public ArrayList<Task> getChildren() {
+        return children;
+    }
+    public int getSubtreeSize() {
+        return subtreeSize;
+    }
 
-            
+
     // Returns true if there are actionable tasks.
     public boolean reset() { // Set task to the first actionable task.
         nodeIndex = 0;
@@ -40,23 +54,22 @@ class Task {
             nextActionable();
         //System.out.println("Reset to action: " + getCurrent().action);
         //System.out.println("nodeIndex: " + nodeIndex + ", subtreeSize: " + subtreeSize);
-        return nodeIndex < subtreeSize; 
+        return nodeIndex < subtreeSize;
     }
     public Task getCurrent() {
-        if (nodeIndex < subtreeSize) {
-            return getNodeByPriority(nodeIndex);
-        } else {
-            return null;
-        }
+        return getNodeByPriority(nodeIndex);
     }
     public void nextActionable() {
         while (++nodeIndex < subtreeSize &&
-               getCurrent().action != null &&
-               !getCurrent().action.canAct());
+                getCurrent().action != null &&
+                !getCurrent().action.canAct());
     }
 
     public void addParallel(Action a) {
         parent.addSerial(a);
+    }
+    public void addParallel(Task t) {
+        parent.addSerial(t);
     }
     public void addSerial(Action a) {
         if (children == null)
@@ -64,26 +77,75 @@ class Task {
         children.add(new Task(this, a));
         subtreeSizeUpdate(1);
     }
+    public void addSerial(Task t) {
+        if (children == null)
+            children = new ArrayList<Task>();
+        t.parent = this;
+        children.add(t);
+        subtreeSizeUpdate(t.getSubtreeSize());
+    }
+
+    public String toString() {
+        String output = action + "(" + subtreeSize + ")\n";
+        Queue<Task> currentLevel = new ArrayDeque<Task>();
+        currentLevel.add(this);
+        int count = subtreeSize - 1;
+        Task node = null;
+        while (0 < count) {
+            --count;
+            node = currentLevel.remove();
+            if (node.getChildren() != null) {
+                for(Task child: node.getChildren()) {
+                    --count;
+                    output += child.getAction() +
+                              "(" + child.getSubtreeSize() + ") ";
+                    currentLevel.add(child);
+                }
+            }
+            output += "| ";
+        }
+        return output;
+    }
 
 
     private void subtreeSizeUpdate(int n) {
+        subtreeSize += n;
         if (parent != null) {
             parent.subtreeSizeUpdate(n);
         }
-        subtreeSize += n;
     }
     // Priority (min, max) = (subtreeSize - 1, 0)
     // Automagically returns nth most important node.
     private Task getNodeByPriority(int n) {
-        if (n == 0) {
-            return this;
-        } else if (n - 1 < children.size()) {
-            return children.get(n - 1);
-        } else {
-            // Recursion
-            System.err.println("Searched for node of priority: " + n + ". Not implemented.");
-            return null;
+        if (nodeIndex < subtreeSize) {
+            if (n == 0) {
+                return this;
+            } else if (n - 1 < children.size()) {
+                return children.get(n - 1);
+            } else {
+                // Level order (breadth-first) traversal.
+                // Better algorithm may involve:
+                // https://en.wikipedia.org/wiki/Tree_traversal#Infinite_trees
+                // or "duplicate" counting to maximize task utility.
+                Queue<Task> currentLevel = new ArrayDeque<Task>();
+                currentLevel.addAll(children);
+                n = n - children.size();
+                Task node = null;
+                while (n != 0) {
+                    --n;
+                    node = currentLevel.remove();
+                    if (n == 0)
+                        return node;
+                    for(Task child: node.getChildren()) {
+                        --n;
+                        if (n == 0)
+                            return child;
+                        currentLevel.add(child);
+                    }
+                }
+            }
         }
+        return null;
     }
 }
 /*
@@ -91,45 +153,24 @@ class Task {
     //    // Recursion
     //}
     private void makeSubtasks() {
-        subtasks = action.getSubtasks();
+    subtasks = action.getSubtasks();
     }
 
     // Issue: how to deal with macro?
     // e.g. too many minerals, need more helipads,
     // how to build more than 1 helipad?
-       // private ArrayList<Task> makeSubtasks(BuildAction a) {
-       //     ArrayList<Task> newTasks = new ArrayList<Task>();
-       //     switch (a.type) {
-       //         case BEAVER:
-       //             break;
-       //         case MINER:
-       //             BuildAction tmp = new BuildAction(action.agent,
-       //                     RobotType.MinerFactory);
-       //             newTasks.add(new Task(tmp));
-       //         case deafult:
-       //             break;
-       //     }
-       //     subtasks.addAll(newTasks);
-       //     if (newTasks.size() == 0) {
-       //         return null;
-       //     } else {
-       //         treeSize += newTasks.size();
-       //         return newTasks;
-       //     }
-       // }
+    // private ArrayList<Task> makeSubtasks(BuildAction a) {
+    // }
 
-    // Traverse the tree of tasks.
-    // NOTE: Very suboptimal.
-    // Need to flatten list to properly evaluate things.
     private void cleanCompletedTasks() {
-        ArrayList<Task> tmp = new ArrayList<Task>(subtasks.size());
-        tmp.addAll(subtasks);
-        // TODO: optimize
-        for (Task subtask : tmp) {
-            if (subtask.isComplete()) {
-                subtasks.remove(subtask);
-            }
+    ArrayList<Task> tmp = new ArrayList<Task>(subtasks.size());
+    tmp.addAll(subtasks);
+    // TODO: optimize
+    for (Task subtask : tmp) {
+        if (subtask.isComplete()) {
+            subtasks.remove(subtask);
         }
     }
-}
-    */
+    }
+    }
+*/

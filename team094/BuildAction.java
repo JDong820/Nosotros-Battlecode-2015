@@ -9,10 +9,12 @@ class BuildAction extends Action {
     int lastTry;
     boolean canSpawn = true;
 
+
     BuildAction(Role robot, RobotType targetType) {
         super(robot);
         type = targetType;
     }
+
 
     public boolean canAct() {
         if (lastTry < Clock.getRoundNum())
@@ -25,11 +27,14 @@ class BuildAction extends Action {
     public void act() throws GameActionException {
         lastTry = Clock.getRoundNum();
         if (spawn(Direction.NORTH, type)) {
-            System.out.println("Completed action: " + this);
-            completed = true;
+            setComplete();
         } else {
             canSpawn = false;
         }
+    }
+    public BuildAction copy() {
+        // TODO: add count
+        return new BuildAction(agent, type);
     }
 
     public String toString() {
@@ -37,8 +42,14 @@ class BuildAction extends Action {
     }
 
 
+    protected void setComplete() {
+        System.out.println("Completed action: " + this);
+        completed = true;
+    }
+
+
     private boolean spawn(Direction d,
-            RobotType type) throws GameActionException {
+                          RobotType type) throws GameActionException {
         int[] offsets = {0,1,-1,2,-2,3,-3,4};
         for (int offset: offsets) {
             Direction trialDir = Duck.i2d((Duck.val2i(d)+offset+8)%8);

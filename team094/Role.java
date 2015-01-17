@@ -47,12 +47,25 @@ abstract class Role {
     public int getID() {
         return id;
     }
- 
+
+
     abstract Msg fetchNextMsg() throws GameActionException;
     abstract void update();
     abstract void execute();
 
     abstract protected void handleMessage(Msg m) throws GameActionException;
+
+
+    public ArrayList<Msg> removeMail(MailFilter f) {
+        ArrayList<Msg> results = new ArrayList<Msg>(messages.size());
+        for (int i = messages.size() - 1; i >= 0; --i) {
+            if (f.pass(messages.get(i))) {
+                results.add(messages.remove(i));
+            }
+        }
+        return results;
+    }
+
 
     protected void updateInbox() {
         try {
@@ -65,18 +78,9 @@ abstract class Role {
         } catch (GameActionException e) {
             System.err.println("Could not fetch mail.");
         }
-    }   
-    protected ArrayList<Msg> removeMail(MailFilter f) {
-        ArrayList<Msg> results = new ArrayList<Msg>(messages.size());
-        for (int i = messages.size() - 1; i >= 0; --i) {
-            if (f.pass(messages.get(i))) {
-                results.add(messages.remove(i));
-            }
-        }
-        return results;
     }
     protected boolean send(RobotType targetType,
-            Code c, ArrayList<Integer> data) throws GameActionException {
+                           Code c, ArrayList<Integer> data) throws GameActionException {
         Msg m = new Msg(rc.getID(), Duck.val2i(c), data);
         return send(targetType, m);
     }
@@ -88,76 +92,76 @@ abstract class Role {
                 final int inboxOffset;
                 // TODO: put these into a constants file.
                 switch (targetType) {
-                    case HQ:
-                        inboxOffset = 0x0000;
-                        break;
-                    case BEAVER:
-                        inboxOffset = 0x1000;
-                        break;
-                    case MINER:
-                        inboxOffset = 0x2000;
-                        break;
-                    case BASHER:
-                    case LAUNCHER:
-                    case SOLDIER:
-                    case TANK:
-                        inboxOffset = 0x2000;
-                        break;
-                    case DRONE:
-                        inboxOffset = 0x3000;
-                        break;
-                    case MISSILE:
-                        inboxOffset = 0x4000;
-                        break;
-                    case COMMANDER:
-                        inboxOffset = 0x5000;
-                        break;
-                    case COMPUTER:
-                        inboxOffset = 0x6000;
-                        break;
-                    // case HANDWASHSTATION: // No inbox.
-                    case AEROSPACELAB:
-                        inboxOffset = 0x7000;
-                        break;
-                    case MINERFACTORY:
-                        inboxOffset = 0x8000;
-                        break;
-                    case BARRACKS:
-                        inboxOffset = 0x9000;
-                        break;
-                    case HELIPAD:
-                        inboxOffset = 0xa000;
-                        break;
-                    case SUPPLYDEPOT:
-                        inboxOffset = 0xb000;
-                        break;
-                    case TANKFACTORY:
-                        inboxOffset = 0xc000;
-                        break;
-                    case TECHNOLOGYINSTITUTE:
-                        inboxOffset = 0xd000;
-                        break;
-                    // case TOWER:  // No inbox.
-                    case TRAININGFIELD:
-                        inboxOffset = 0xe000;
-                        break;
-                    default: // I didn't miss anything!!!
-                        inboxOffset = 0xffff;
-                        break;
+                case HQ:
+                    inboxOffset = 0x0000;
+                    break;
+                case BEAVER:
+                    inboxOffset = 0x1000;
+                    break;
+                case MINER:
+                    inboxOffset = 0x2000;
+                    break;
+                case BASHER:
+                case LAUNCHER:
+                case SOLDIER:
+                case TANK:
+                    inboxOffset = 0x2000;
+                    break;
+                case DRONE:
+                    inboxOffset = 0x3000;
+                    break;
+                case MISSILE:
+                    inboxOffset = 0x4000;
+                    break;
+                case COMMANDER:
+                    inboxOffset = 0x5000;
+                    break;
+                case COMPUTER:
+                    inboxOffset = 0x6000;
+                    break;
+                // case HANDWASHSTATION: // No inbox.
+                case AEROSPACELAB:
+                    inboxOffset = 0x7000;
+                    break;
+                case MINERFACTORY:
+                    inboxOffset = 0x8000;
+                    break;
+                case BARRACKS:
+                    inboxOffset = 0x9000;
+                    break;
+                case HELIPAD:
+                    inboxOffset = 0xa000;
+                    break;
+                case SUPPLYDEPOT:
+                    inboxOffset = 0xb000;
+                    break;
+                case TANKFACTORY:
+                    inboxOffset = 0xc000;
+                    break;
+                case TECHNOLOGYINSTITUTE:
+                    inboxOffset = 0xd000;
+                    break;
+                // case TOWER:  // No inbox.
+                case TRAININGFIELD:
+                    inboxOffset = 0xe000;
+                    break;
+                default: // I didn't miss anything!!!
+                    inboxOffset = 0xffff;
+                    break;
                 }
                 if (inboxOffset != 0xffff) {
                     // Get next message spot
                     int nextMessageOffset = 0;
                     // TODO: use a constants file (INBOX_SIZE).
                     while (nextMessageOffset < 0x1000 &&
-                           rc.readBroadcast(inboxOffset + nextMessageOffset) != 0) {
+                            rc.readBroadcast(inboxOffset + nextMessageOffset) != 0) {
                         Header h = new Header(rc, inboxOffset + nextMessageOffset);
                         nextMessageOffset += h.getPacketLen();
                     }
                     // "Transaction" semi-guarantee
                     if (Clock.getBytecodesLeft() > msg.getPacketLen()*25 + safety) {
                         msg.writeWithOffset(rc, inboxOffset + nextMessageOffset);
-                    } 
+                    }
                 }
                 return true;
             }
@@ -196,7 +200,7 @@ abstract class Role {
     }
 
     public void autotransferSupply(double a, double b, double c,
-                            int d, int e, int f) throws GameActionException {
+                                   int d, int e, int f) throws GameActionException {
         double supply = rc.getSupplyLevel();
         if (supply > f) {
             RobotInfo[] nearbyAllies = rc.senseNearbyRobots(rc.getLocation(),
@@ -241,13 +245,13 @@ abstract class Role {
         }
         return false;
     }
-    
+
     protected Msg fetchNextMsg(int inboxBegin,
                                int inboxEnd) throws GameActionException {
         final Header h = Header.readNextUnreadHeader(rc, inboxBegin, inboxEnd,
-                                                     inboxIndex);
+                         inboxIndex);
         // Only get null headers if out of range; looking past inboxEnd.
-        if (h == null) { 
+        if (h == null) {
             System.out.println("Mailbox full! Clearing.");
             // Clear the entire mailbox.
             clearMessages(inboxBegin, inboxEnd);
@@ -262,7 +266,7 @@ abstract class Role {
             // clear the mailbox.
             if (inboxBegin < inboxIndex) {
                 final Header pre = Header.readNextUnreadHeader(rc,
-                        inboxBegin, inboxIndex, inboxBegin);
+                                   inboxBegin, inboxIndex, inboxBegin);
                 // Note: untested behavior near end of mailbox.
                 if (pre == null) {
                     // Tricky optimization where the header holds the mailbox end.
@@ -280,7 +284,7 @@ abstract class Role {
         inboxIndex += h.getPacketLen();
 
         if (h.getTargetPid() == ((0xffff & id) % 0xffff) ||
-            h.getTargetPid() == 0xffff) {
+                h.getTargetPid() == 0xffff) {
             rc.broadcast(h.getAbsoluteOffset(), (0xffff0000 | (0x00ff & h.getDataLen())));
             return new Msg(rc, h);
         }

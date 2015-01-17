@@ -32,19 +32,14 @@ class Beaver extends Role {
         try {
             // TODO: add calc from map analysis.
             if (coreReady && rc.senseOre(location) > p.BEAVER_ORE_THRESHOLD) {
-                    rc.mine();
-                    coreReady = false;
-            } else {
-                // If not mining, tell HQ idle.
-                //send(RobotType.HQ, new Msg(rc, 0x01, null));
+                rc.mine();
+                coreReady = false;
             }
-            // Handle as many messages as possible.
-            /*
-            while (unreadMsg != null && Clock.getBytecodesLeft() > safety) {
-                handleMessage(unreadMsg);
-                update();
+            for (Msg m: messages) {
+                if (Clock.getBytecodesLeft() < safety)
+                    break;
+                handleMessage(m);
             }
-            */
             if (coreReady) {
                 coreReady ^= move(location.directionTo(base).opposite());
             }
@@ -56,6 +51,7 @@ class Beaver extends Role {
                                    p.SUPPLY_BEAVER_E,
                                    p.SUPPLY_BEAVER_F);
             }
+
             if (p.BENCHMARKING_ON) {
                 System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.");
                 System.out.println("Received " + messages.size() + " total messages this turn.");
@@ -65,42 +61,39 @@ class Beaver extends Role {
             e.printStackTrace();
         }
     }
-    
+
     protected void handleMessage(Msg msg) throws GameActionException {
+        /*
+        final Header debug = new Header(msg);
+        System.out.println(debug.getTargetPid() + " ! {" +
+                debug.getSenderPid() + ", " +
+                debug.getTimeout() + ", " +
+                debug.getCode() + ", " +
+                debug.getDataLen() + "}");
+                */
+
         switch (msg.getHeader().getCode()) {
-            case REQ: // Request to build
+        case REQ: // Request by status
+            final Status status = Duck.i2s(msg.getData().get(0));
+            //System.out.println("{status: " + status + "}");
+            switch (status) {
+            case IDLE:
                 if (coreReady) {
-                    // Protocol
-                    // {building, desired_location}
-                    final RobotType building = Duck.i2rt(msg.getData().get(0));
-                    final MapLocation loc = Duck.i2ml(msg.getData().get(1));
-
-                    // Check if we are fit to build.
-                    if (true) {
-                        // Ack
-                        send(RobotType.HQ, Code.ACK, Duck.val2ali(location));
-                    }
-                    
-
-                    final Header debug1 = new Header(msg);
-                    System.out.println(debug1.getTargetPid() + " ! {" +
-                            debug1.getSenderPid() + ", " +
-                            debug1.getTimeout() + ", " +
-                            debug1.getCode() + ", " +
-                            debug1.getDataLen() + ", {building: " +
-                            building + ", loc: " + loc + "}} (REQ)");
+                    send(RobotType.HQ, Code.ACK, Duck.val2ali(location));
                 }
                 break;
-            case DEBUG: // Debug ping
+            case ANY:
             default:
-                final Header debug = new Header(msg);
-                System.out.println(debug.getTargetPid() + " ! {" +
-                        debug.getSenderPid() + ", " +
-                        debug.getTimeout() + ", " +
-                        debug.getCode() + ", " +
-                        debug.getDataLen() + ", {seq: 0x" +
-                        Integer.toHexString(msg.getData().get(0)) + "}}");
+                send(RobotType.HQ, Code.ACK, Duck.val2ali(location));
                 break;
+            }
+            final Header debug1 = new Header(msg);
+            break;
+        case DEBUG: // Debug ping
+        default:
+            System.out.println("{seq: 0x" +
+                               Integer.toHexString(msg.getData().get(0)) + "}");
+            break;
         }
     }
 

@@ -39,7 +39,7 @@ class Header {
     }
 
     Header(int h1, int h2, int offset) {
-        header1 = h1; 
+        header1 = h1;
         header2 = h2;
         absoluteOffset = offset;
 
@@ -139,9 +139,9 @@ class Header {
                 // This works automagically beacuse the dataLen is encoded
                 // into header's target for read messages.
                 return readNextUnreadHeader(rc,
-                        inboxBegin, inboxEnd,
-                        absoluteIndex + h.getPacketLen());
-            } 
+                                            inboxBegin, inboxEnd,
+                                            absoluteIndex + h.getPacketLen());
+            }
             return h;
         } else {
             // Index out of range, no message found.
@@ -149,7 +149,7 @@ class Header {
             return null;
         }
     }
- 
+
     private static int senderPidFromHeader(int header) {
         return 0xffff & (header >> 16);
     }

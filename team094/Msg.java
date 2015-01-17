@@ -3,7 +3,7 @@ import battlecode.common.*;
 import java.util.*;
 
 // TODO: use the Header class.
-class Msg { 
+class Msg {
     final Header header;
     final ArrayList<Integer> data;
 
@@ -24,11 +24,11 @@ class Msg {
         }
     }
     // Read
-    Msg(RobotController rc, int offset) throws GameActionException{
-        this(rc.getID(), readPacketFromOffset(rc, offset)); 
+    Msg(RobotController rc, int offset) throws GameActionException {
+        this(rc.getID(), readPacketFromOffset(rc, offset));
     }
     // Read from header
-    Msg(RobotController rc, Header h) throws GameActionException{
+    Msg(RobotController rc, Header h) throws GameActionException {
         header = h;
         data = readDataAfterHeader(rc, h);
 
@@ -39,9 +39,9 @@ class Msg {
         final short dataLen;
         if (data == null) {
             dataLen = 0;
-        } else if (data.size() > 0xff) { 
+        } else if (data.size() > 0xff) {
             System.err.println("Tried encoding packet that was too long.");
-            dataLen = 0; 
+            dataLen = 0;
             data = null;
         } else {
             dataLen = (short)(0x00ff & data.size());
@@ -50,7 +50,7 @@ class Msg {
         header = new Header(senderId % 0x10000,
                             0xffff, // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
-                            code, 
+                            code,
                             dataLen);
         packet = encode(header, data);
     }
@@ -60,9 +60,9 @@ class Msg {
         final short dataLen;
         if (data == null) {
             dataLen = 0;
-        } else if (data.size() > 0xff) { 
+        } else if (data.size() > 0xff) {
             System.err.println("Tried encoding packet that was too long.");
-            dataLen = 0; 
+            dataLen = 0;
             data = null;
         } else {
             dataLen = (short)(0x00ff & data.size());
@@ -71,7 +71,7 @@ class Msg {
         header = new Header(senderId % 0x10000,
                             ((0xffff & targetPid) % 0xffff), // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
-                            code, 
+                            code,
                             dataLen);
         packet = encode(header, data);
     }
@@ -90,9 +90,9 @@ class Msg {
         return header;
     }
 
-    
+
     private static ArrayList<Integer> readDataAfterHeader(RobotController rc,
-                                                          Header h) throws GameActionException {
+            Header h) throws GameActionException {
         assert(h.getAbsoluteOffset() >= 0);
         ArrayList<Integer> data = new ArrayList<Integer>(h.getDataLen());
         for (int i = 0; i < h.getDataLen(); ++i) {
@@ -101,18 +101,18 @@ class Msg {
         return data;
     }
     private static ArrayList<Integer> readPacketFromOffset(RobotController rc,
-                                                            int offset) throws GameActionException {
+            int offset) throws GameActionException {
         final Header h = new Header(rc, offset);
         return encode(h, readDataAfterHeader(rc, h));
     }
 
     // NOTE: No checks! No transaction!
     protected void writeWithOffset(RobotController rc,
-                                  int offset) throws GameActionException {
+                                   int offset) throws GameActionException {
         for (int i = 0; i < packet.size(); ++i) {
             rc.broadcast(offset+i, packet.get(i));
             //System.out.print(" <<< 0x" + Integer.toHexString(packet.get(i)));
-        } 
+        }
         //System.out.println(" @ offset=0x" + Integer.toHexString(offset));
     }
 
@@ -127,6 +127,6 @@ class Msg {
     }
     private ArrayList<Integer> dataFromMsg(short dataLen, ArrayList<Integer> msg) {
         return new ArrayList<Integer>(msg.subList(Header.headerLen,
-                                                  Header.headerLen + dataLen));
-    }    
+                                      Header.headerLen + dataLen));
+    }
 }

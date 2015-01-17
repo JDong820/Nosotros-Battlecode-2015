@@ -21,11 +21,17 @@ class HQ extends Role {
         p = new Params();
         //p.BENCHMARKING_ON = true;
 
-        //SearchAction s = new SearchAction(this,
-        //        RobotType.BEAVER, 0x0000); // Select IDLE
+        SearchAction s = new SearchAction(this,
+                                          RobotType.BEAVER, Status.ANY); // Select IDLE
         BuildAction b = new BuildAction(this, RobotType.BEAVER);
+        Task subtask = new Task(b);
+        //subtask.addSerial(b);
+
         task = new Task();
-        task.addSerial(b);
+        task.addSerial(subtask);
+        subtask.addParallel(s);
+
+        System.out.println("Initial task: \n" + task + "\n");
         //task.addSerial(s);
 
         goalBeaverCount = calcBeaverCap(p, baseToEnemySquared);
@@ -45,12 +51,12 @@ class HQ extends Role {
         beavers = new ArrayList<RobotInfo>();
         for (RobotInfo ri : robots) {
             switch (ri.type) {
-                case BEAVER:
-                    ++numBeavers;
-                    beavers.add(ri);
-                    break;
-                default:
-                    break;
+            case BEAVER:
+                ++numBeavers;
+                beavers.add(ri);
+                break;
+            default:
+                break;
             }
         }
 
@@ -66,7 +72,7 @@ class HQ extends Role {
             if (Clock.getRoundNum() % 100 == 0) {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  " + rc.getTeamOre());
             }
-            if (Clock.getRoundNum() == 3) {
+            if (Clock.getRoundNum() == 83) {
                 rc.resign();
             }
 
@@ -76,20 +82,18 @@ class HQ extends Role {
             }
 
             if (task.reset()) {
-                System.out.println("Starting tasks.");
                 while (Clock.getBytecodesLeft() > 500 + safety) {
                     int benchBytecodesBefore = Clock.getBytecodesLeft();
 
 
                     Task curr = task.getCurrent();
                     if (curr == null) {
-                        System.out.println("Reached end of tasks.");
-                        // If there are no tasks to do,
-                        // go back to the beginning.
+                        // If there are no act-able tasks left,
+                        // recheck from the beginning.
                         if (!task.reset()) break;
                     }
                     //assert (curr.canAct());
-                    System.out.println("Executing action: " + curr.getAction());
+                    //System.out.println("Executing action: " + curr.getAction());
                     curr.getAction().act();
                     task.nextActionable();
 
@@ -97,7 +101,7 @@ class HQ extends Role {
                     benchBytecodes.add(benchBytecodesBefore - Clock.getBytecodesLeft());
                 }
             } else {
-                System.out.println("HQ has no tasks to execute!");
+                //System.out.println("HQ has no tasks to execute!");
             }
             if (Clock.getBytecodesLeft() > safety) {
                 autotransferSupply(p.SUPPLY_HQ_A,
@@ -128,9 +132,9 @@ class HQ extends Role {
                 }
                 System.out.print("Turn stats:\n");
                 System.out.print("Bytecodes used: " + (10000 - Clock.getBytecodesLeft()));
-                if (benchAverage > 0) 
+                if (benchAverage > 0)
                     System.out.print(". Average loop cost: " + benchAverage +
-                            ". Loops executed: " + benchBytecodes.size() + ".");
+                                     ". Loops executed: " + benchBytecodes.size() + ".");
                 if (benchMsgCount > 0) {
                     System.out.print("\nHandled " + benchMsgCount + " total messages.");
                 }
@@ -144,29 +148,29 @@ class HQ extends Role {
 
     protected void handleMessage(Msg msg) throws GameActionException {
         switch (msg.getHeader().getCode()) {
-            case ACK: // ACK can build.
-                // Protocol
-                // {builder_location}
-                final MapLocation loc = Duck.i2ml(msg.getData().get(0));
+        case ACK: // ACK can build.
+            // Protocol
+            // {builder_location}
+            final MapLocation loc = Duck.i2ml(msg.getData().get(0));
 
-                final Header debug2 = new Header(msg);
-                System.out.println(debug2.getTargetPid() + " ! {" +
-                            debug2.getSenderPid() + ", " +
-                            debug2.getTimeout() + ", " +
-                            debug2.getCode() + ", " +
-                            debug2.getDataLen() + ", {loc: " + loc + "}} (ACK)");
-                break;
-            case DEBUG: // Debug ping
-            default:
-                final Header debug = new Header(msg);
-                System.out.println(debug.getTargetPid() + " ! {" +
-                        debug.getSenderPid() + ", " +
-                        debug.getTimeout() + ", " +
-                        debug.getCode() + ", " +
-                        debug.getDataLen() + ", {seq: 0x" +
-                        Integer.toHexString(msg.getData().get(0)) + "}}");
-                break;
-        }  
+            final Header debug2 = new Header(msg);
+            System.out.println(debug2.getTargetPid() + " ! {" +
+                               debug2.getSenderPid() + ", " +
+                               debug2.getTimeout() + ", " +
+                               debug2.getCode() + ", " +
+                               debug2.getDataLen() + ", {loc: " + loc + "}} (ACK)");
+            break;
+        case DEBUG: // Debug ping
+        default:
+            final Header debug = new Header(msg);
+            System.out.println(debug.getTargetPid() + " ! {" +
+                               debug.getSenderPid() + ", " +
+                               debug.getTimeout() + ", " +
+                               debug.getCode() + ", " +
+                               debug.getDataLen() + ", {seq: 0x" +
+                               Integer.toHexString(msg.getData().get(0)) + "}}");
+            break;
+        }
     }
 
     // Returns false when all possible spawn locations are blocked.
@@ -189,5 +193,5 @@ class HQ extends Role {
 
     protected Msg fetchNextMsg() throws GameActionException {
         return fetchNextMsg(0x0000, 0x1000);
-    }            
+    }
 }

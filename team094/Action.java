@@ -12,16 +12,18 @@ abstract class Action {
     boolean completed = false;
 
     static final int BCOST_SEND = 500;
-    
+
     Action(Role robot) {
         agent = robot;
     }
 
-   
+
     public boolean isComplete() {
         return completed;
     }
 
     abstract public boolean canAct();
     abstract public void act() throws GameActionException;
+    abstract public Action copy();
+    abstract protected void setComplete();
 }

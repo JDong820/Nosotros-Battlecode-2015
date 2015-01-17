@@ -1,5 +1,5 @@
 // Typing for the duck in you.
-// Sort of an extension to Msg, but just types.
+// Sort of an extension to Msg, but just encoding/decoding types.
 package team094;
 import java.util.*;
 import battlecode.common.*;
@@ -48,72 +48,72 @@ class Duck {
     public static int val2i(RobotType type) {
         final int typeval;
         switch (type) {
-            case AEROSPACELAB:
-                typeval = 0;
-                break;
-            case BARRACKS:
-                typeval = 1;
-                break;
-            case BASHER:
-                typeval = 2;
-                break;
-            case BEAVER:
-                typeval = 3;
-                break;
-            case COMMANDER:
-                typeval = 4;
-                break;
-            case COMPUTER:
-                typeval = 5;
-                break;
-            case DRONE:
-                typeval = 6;
-                break;
-            case HANDWASHSTATION:
-                typeval = 7;
-                break;
-            case HELIPAD:
-                typeval = 8;
-                break;
-            case HQ:
-                typeval = 9;
-                break;
-            case LAUNCHER:
-                typeval = 10;
-                break;
-            case MINER:
-                typeval = 11;
-                break;
-            case MINERFACTORY:
-                typeval = 12;
-                break;
-            case MISSILE:
-                typeval = 13;
-                break;
-            case SOLDIER:
-                typeval = 14;
-                break;
-            case SUPPLYDEPOT:
-                typeval = 15;
-                break;
-            case TANK:
-                typeval = 16;
-                break;
-            case TANKFACTORY:
-                typeval = 17;
-                break;
-            case TECHNOLOGYINSTITUTE:
-                typeval = 18;
-                break;
-            case TOWER:
-                typeval = 19;
-                break;
-            case TRAININGFIELD:
-                typeval = 20;
-                break;
-            default:
-                System.err.println("Sad duck.");
-                return -1;
+        case AEROSPACELAB:
+            typeval = 0;
+            break;
+        case BARRACKS:
+            typeval = 1;
+            break;
+        case BASHER:
+            typeval = 2;
+            break;
+        case BEAVER:
+            typeval = 3;
+            break;
+        case COMMANDER:
+            typeval = 4;
+            break;
+        case COMPUTER:
+            typeval = 5;
+            break;
+        case DRONE:
+            typeval = 6;
+            break;
+        case HANDWASHSTATION:
+            typeval = 7;
+            break;
+        case HELIPAD:
+            typeval = 8;
+            break;
+        case HQ:
+            typeval = 9;
+            break;
+        case LAUNCHER:
+            typeval = 10;
+            break;
+        case MINER:
+            typeval = 11;
+            break;
+        case MINERFACTORY:
+            typeval = 12;
+            break;
+        case MISSILE:
+            typeval = 13;
+            break;
+        case SOLDIER:
+            typeval = 14;
+            break;
+        case SUPPLYDEPOT:
+            typeval = 15;
+            break;
+        case TANK:
+            typeval = 16;
+            break;
+        case TANKFACTORY:
+            typeval = 17;
+            break;
+        case TECHNOLOGYINSTITUTE:
+            typeval = 18;
+            break;
+        case TOWER:
+            typeval = 19;
+            break;
+        case TRAININGFIELD:
+            typeval = 20;
+            break;
+        default:
+            System.err.println("Sad duck.");
+            return -1;
         }
         return typeval;
     }
@@ -123,42 +123,54 @@ class Duck {
     }
     public static int val2i(Direction d) {
         switch (d) {
-            case NORTH:
-                return 0;
-            case NORTH_EAST:
-                return 1;
-            case EAST:
-                return 2;
-            case SOUTH_EAST:
-                return 3;
-            case SOUTH:
-                return 4;
-            case SOUTH_WEST:
-                return 5;
-            case WEST:
-                return 6;
-            case NORTH_WEST:
-                return 7;
-            default:
-                System.err.println("Sad duck.");
-                return -1;
+        case NORTH:
+            return 0;
+        case NORTH_EAST:
+            return 1;
+        case EAST:
+            return 2;
+        case SOUTH_EAST:
+            return 3;
+        case SOUTH:
+            return 4;
+        case SOUTH_WEST:
+            return 5;
+        case WEST:
+            return 6;
+        case NORTH_WEST:
+            return 7;
+        default:
+            System.err.println("Sad duck.");
+            return -1;
         }
     }
     public static int val2i(Code c) {
         switch (c) {
-            case INVALID:
-                return 0x00;
-            case DEBUG:
-                return 0x01;
-            case REQ:
-                return 0x02;
-            case ACK:
-                return 0x03;
-            default:
-                System.err.println("Sad duck.");
-                return -1;
+        case INVALID:
+            return 0x00;
+        case DEBUG:
+            return 0x01;
+        case REQ:
+            return 0x02;
+        case ACK:
+            return 0x03;
+        default:
+            System.err.println("Sad duck.");
+            return -1;
         }
     }
+    public static int val2i(Status s) {
+        switch (s) {
+        case IDLE:
+            return 0;
+        case ANY:
+            return 0xffff;
+        default:
+            System.err.println("Sad duck.");
+            return 0xffff;
+        }
+    }
+
 
     public static ArrayList<Integer> val2ali(int i) {
         ArrayList<Integer> tmp = new ArrayList<Integer>(1);
@@ -170,6 +182,9 @@ class Duck {
     }
     public static ArrayList<Integer> val2ali(MapLocation loc) {
         return val2ali(val2i(loc));
+    }
+    public static ArrayList<Integer> val2ali(Status s) {
+        return val2ali(val2i(s));
     }
 
     public static ArrayList<Task> t2alt(Task t) {
@@ -190,6 +205,16 @@ class Duck {
     }
     public static Code i2code(int enumOrd) {
         return codes[enumOrd];
+    }
+    public static Status i2s(int code) {
+        switch (code) {
+        case 0x0000:
+            return Status.IDLE;
+        case 0xffff:
+            return Status.ANY;
+        default:
+            return Status.ANY;
+        }
     }
 
     public static ArrayList<RobotType> rt2alrt(RobotType type) {
