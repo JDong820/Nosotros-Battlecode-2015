@@ -1,7 +1,7 @@
 package team094;
 
 public enum Status {
-    IDLE,
+    IDLE, TRAVELING, BUILDING, MINING,
     ANY;
 
     Status() {

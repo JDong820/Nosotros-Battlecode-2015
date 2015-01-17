@@ -1,8 +1,6 @@
 package team094;
 
 
-class SelectFilter {
-
-    SelectFilter() {
-    }
+interface SelectFilter {
+    abstract public double eval(Object o);
 }
