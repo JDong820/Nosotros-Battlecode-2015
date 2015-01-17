@@ -4,98 +4,78 @@ import java.util.*;
 
 // TODO: use the Header class.
 class Msg {
-    // Packet data; can you feel the immutable state?
     final Header header;
     final ArrayList<Integer> data;
 
-    final RobotController rc;
     final ArrayList<Integer> packet;
 
     // Decode packet
-    Msg(RobotController rc, ArrayList<Integer> msg) {
+    Msg(int senderId, ArrayList<Integer> msg) {
         if (msg == null) {
             header = null;
             data = null;
 
-            this.rc = null;
             packet = null;
         } else {
             header = new Header(msg.get(0), msg.get(1));
             data = dataFromMsg(header.getDataLen(), msg);
 
-            this.rc = rc;
             packet = msg;
         }
     }
     // Read
-    Msg(RobotController rc, int offset) throws GameActionException{
-        this(rc, readPacketFromOffset(rc, offset)); 
+    Msg(RobotController rc, int offset) throws GameActionException {
+        this(rc.getID(), readPacketFromOffset(rc, offset));
     }
     // Read from header
-    Msg(RobotController rc, Header h) throws GameActionException{
+    Msg(RobotController rc, Header h) throws GameActionException {
         header = h;
         data = readDataAfterHeader(rc, h);
 
-        this.rc = rc;
         packet = encode(h, data);
     }
     // Shout
-    Msg(RobotController rc, int code, ArrayList<Integer> data) {
+    Msg(int senderId, int code, ArrayList<Integer> data) {
         final short dataLen;
         if (data == null) {
             dataLen = 0;
-        } else if (data.size() > 0xff) { 
+        } else if (data.size() > 0xff) {
             System.err.println("Tried encoding packet that was too long.");
-            dataLen = 0; 
+            dataLen = 0;
             data = null;
         } else {
             dataLen = (short)(0x00ff & data.size());
         }
         this.data = data;
-        header = new Header(rc.getID() % 0x10000,
+        header = new Header(senderId % 0x10000,
                             0xffff, // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
-                            code, 
+                            code,
                             dataLen);
-        this.rc = rc;
         packet = encode(header, data);
     }
     // Whisper
-    Msg(RobotController rc,
+    Msg(int senderId,
         int targetPid, int code, ArrayList<Integer> data) {
         final short dataLen;
         if (data == null) {
             dataLen = 0;
-        } else if (data.size() > 0xff) { 
+        } else if (data.size() > 0xff) {
             System.err.println("Tried encoding packet that was too long.");
-            dataLen = 0; 
+            dataLen = 0;
             data = null;
         } else {
             dataLen = (short)(0x00ff & data.size());
         }
         this.data = data;
-        header = new Header(rc.getID() % 0x10000,
+        header = new Header(senderId % 0x10000,
                             ((0xffff & targetPid) % 0xffff), // Reserved as allcast.
                             2000,// GameConstants.ROUND_MAX_LIMIT;
-                            code, 
+                            code,
                             dataLen);
-        this.rc = rc;
         packet = encode(header, data);
     }
-    private static ArrayList<Integer> readDataAfterHeader(RobotController rc,
-                                                          Header h) throws GameActionException {
-        assert(h.getAbsoluteOffset() >= 0);
-        ArrayList<Integer> data = new ArrayList<Integer>(h.getDataLen());
-        for (int i = 0; i < h.getDataLen(); ++i) {
-            data.add(rc.readBroadcast(h.getAbsoluteOffset() + Header.headerLen + i));
-        }
-        return data;
-    }
-    private static ArrayList<Integer> readPacketFromOffset(RobotController rc,
-                                                            int offset) throws GameActionException {
-        final Header h = new Header(rc, offset);
-        return encode(h, readDataAfterHeader(rc, h));
-    }
+
 
     public ArrayList<Integer> getData() {
         return data;
@@ -110,15 +90,29 @@ class Msg {
         return header;
     }
 
-    // Internal
-    // Use this to build a send function.
+
+    private static ArrayList<Integer> readDataAfterHeader(RobotController rc,
+            Header h) throws GameActionException {
+        assert(h.getAbsoluteOffset() >= 0);
+        ArrayList<Integer> data = new ArrayList<Integer>(h.getDataLen());
+        for (int i = 0; i < h.getDataLen(); ++i) {
+            data.add(rc.readBroadcast(h.getAbsoluteOffset() + Header.headerLen + i));
+        }
+        return data;
+    }
+    private static ArrayList<Integer> readPacketFromOffset(RobotController rc,
+            int offset) throws GameActionException {
+        final Header h = new Header(rc, offset);
+        return encode(h, readDataAfterHeader(rc, h));
+    }
+
     // NOTE: No checks! No transaction!
     protected void writeWithOffset(RobotController rc,
-                                  int offset) throws GameActionException {
+                                   int offset) throws GameActionException {
         for (int i = 0; i < packet.size(); ++i) {
             rc.broadcast(offset+i, packet.get(i));
             //System.out.print(" <<< 0x" + Integer.toHexString(packet.get(i)));
-        } 
+        }
         //System.out.println(" @ offset=0x" + Integer.toHexString(offset));
     }
 
@@ -133,6 +127,6 @@ class Msg {
     }
     private ArrayList<Integer> dataFromMsg(short dataLen, ArrayList<Integer> msg) {
         return new ArrayList<Integer>(msg.subList(Header.headerLen,
-                                                  Header.headerLen + dataLen));
-    }    
+                                      Header.headerLen + dataLen));
+    }
 }

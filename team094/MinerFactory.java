@@ -26,4 +26,8 @@ class MinerFactory extends Role {
 
     protected void handleMessage(Msg msg) {
     }
+
+    protected Msg fetchNextMsg() throws GameActionException {
+        return null;
+    }
 }
