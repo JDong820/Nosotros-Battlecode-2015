@@ -1,6 +1,5 @@
 package team094;
 import team094.Params;
-import team094.BO;
 import java.util.*;
 import battlecode.common.*;
 

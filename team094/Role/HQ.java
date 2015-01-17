@@ -127,8 +127,8 @@ class HQ extends Role {
                 }
                 if (state == 2 &&
                         sel.isComplete()) {
-                    task.addSerial(new MoveCommand(this,
-                                sel.getResults(), base.add(Direction.SOUTH)));
+                    //task.addSerial(new MoveCommand(this,
+                    //            sel.getResults(), base.add(Direction.SOUTH)));
                 }
                 //System.out.println("HQ has no tasks to execute!");
             }
