@@ -74,10 +74,6 @@ class Params {
     public final int TOWER_SUPPLY_THRESHOLD = 420;
 
 
-    // Things that don't belong here
-    public boolean BENCHMARKING_ON = false;
-
-
     Params() {
         GOAL_BEAVERS_A = 0.001;
         GOAL_BEAVERS_B = 1;

@@ -5,6 +5,7 @@ import java.util.*;
 import battlecode.common.*;
 
 class Beaver extends Role {
+    final boolean benchBytecodeOutput = false;
     final Params p;
     //int goalMinerFactoryCount;
 
@@ -52,7 +53,7 @@ class Beaver extends Role {
                                    p.SUPPLY_BEAVER_F);
             }
 
-            if (p.BENCHMARKING_ON) {
+            if (benchBytecodeOutput) {
                 System.out.println("Ended with " + Clock.getBytecodesLeft() + " bytecodes left.");
                 System.out.println("Received " + messages.size() + " total messages this turn.");
             }
