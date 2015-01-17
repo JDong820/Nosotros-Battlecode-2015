@@ -21,7 +21,7 @@ class SearchAction extends Action {
     // -1 = done
     byte state = 0;
     int broadcastTurn;
-    ArrayList<Msg> results = null;
+    public ArrayList<Msg> results = null;
 
 
     SearchAction(Role robot, RobotType targetType, Status status) {
@@ -82,6 +82,7 @@ class SearchAction extends Action {
             if (results.size() > 0) {
                 setComplete();
             } else {
+                results = null;
                 state = 0;
             }
             break;

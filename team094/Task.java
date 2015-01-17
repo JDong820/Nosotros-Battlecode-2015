@@ -19,7 +19,7 @@ class Task {
     Task(Task p, Action a) {
         parent = p;
         if (a != null)
-            action = a.copy(); // TODO: Dubious copy
+            action = a;
         else
             action = null;
         creationTurn = Clock.getRoundNum();

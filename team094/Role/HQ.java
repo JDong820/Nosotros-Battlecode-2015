@@ -5,6 +5,18 @@ import battlecode.common.*;
 
 class HQ extends Role {
     final boolean benchBytecodeOutput = false;
+    SearchAction req = new SearchAction(this, RobotType.BEAVER, Status.IDLE);
+    SelectAction sel = new SelectAction(this, new SelectFilter() {
+        @Override
+        public double eval(Object o) {
+            Msg m = (Msg)o;
+            MapLocation loc = Duck.i2ml(m.getData().get(0));
+            return loc.distanceSquaredTo(base.add(Direction.SOUTH));
+        }
+        public String toString() { return "distance_filter"; }
+    }, 1, Duck.al2alo(req.results));
+
+    int state = 0; // TODO: put in task.
 
     final Params p;
 
@@ -22,14 +34,11 @@ class HQ extends Role {
         p = new Params();
         goalBeaverCount = calcBeaverCap(p, baseToEnemySquared);
 
-        //SearchAction s = new SearchAction(this,
-        //        RobotType.BEAVER, Status.IDLE);
-        BuildAction b = new BuildAction(this, RobotType.BEAVER);
+        BuildAction build = new BuildAction(this, RobotType.BEAVER);
 
         task = new Task();
-        for (int i = 0; i < goalBeaverCount; ++i) {
-            task.addSerial(b);
-        }
+        task.addSerial(build.copy());
+        //task.addSerial(req);
 
         System.out.println("Initial task: \n" + task + "\n");
         //task.addSerial(s);
@@ -70,7 +79,7 @@ class HQ extends Role {
                 rc.addMatchObservation(Clock.getRoundNum() + ":  "
                         + calcScoreEvaluation(rc, beavers));
             }
-            if (Clock.getRoundNum() == 1000) {
+            if (Clock.getRoundNum() == 200) {
                 rc.resign();
             }
 
@@ -88,10 +97,11 @@ class HQ extends Role {
                     if (curr == null) {
                         // If there are no act-able tasks left,
                         // recheck from the beginning.
-                        if (!task.reset())
+                        if (!task.reset()) {
                             break;
-                        else
+                        } else {
                             curr = task.getCurrent();
+                        }
                     }
                     //assert (curr.canAct());
                     //System.out.println("Executing action: " + curr.getAction());
@@ -102,6 +112,24 @@ class HQ extends Role {
                     benchBytecodes.add(benchBytecodesBefore - Clock.getBytecodesLeft());
                 }
             } else {
+                if (beavers.size() < goalBeaverCount) {
+                    task.addSerial(new BuildAction(this, RobotType.BEAVER));
+                }
+                if (state == 0 &&
+                        RobotType.MINERFACTORY.oreCost - 50 <= rc.getTeamOre()) {
+                    task.addSerial(req);
+                    state = 1;
+                }
+                if (state == 1 &&
+                        req.isComplete()) { 
+                    task.addSerial(sel);
+                    state = 2;
+                }
+                if (state == 2 &&
+                        sel.isComplete()) {
+                    //task.addSerial(new MoveCommand(this,
+                    //            sel.getResults(), base.add(Direction.SOUTH)));
+                }
                 //System.out.println("HQ has no tasks to execute!");
             }
             if (Clock.getBytecodesLeft() > safety) {
@@ -138,6 +166,9 @@ class HQ extends Role {
         }
     }
     protected void handleMessage(Msg msg) throws GameActionException {
+    }
+    /*
+    protected void handleMessage(Msg msg) throws GameActionException {
         switch (msg.getHeader().getCode()) {
             case ACK: // ACK can build.
                 // Protocol
@@ -163,6 +194,7 @@ class HQ extends Role {
                 break;
         }
     }
+    */
     protected Msg fetchNextMsg() throws GameActionException {
         return fetchNextMsg(0x0000, 0x1000);
     }

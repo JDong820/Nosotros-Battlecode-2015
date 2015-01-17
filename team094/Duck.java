@@ -43,8 +43,6 @@ class Duck {
     };
 
 
-
-
     public static int val2i(RobotType type) {
         final int typeval;
         switch (type) {
@@ -162,7 +160,13 @@ class Duck {
     public static int val2i(Status s) {
         switch (s) {
         case IDLE:
-            return 0;
+            return 0x00;
+        case TRAVELING:
+            return 0x01;
+        case BUILDING:
+            return 0x02;
+        case MINING:
+            return 0x03;
         case ANY:
             return 0xffff;
         default:
@@ -221,5 +225,10 @@ class Duck {
         ArrayList<RobotType> tmp = new ArrayList<RobotType>(1);
         tmp.add(type);
         return tmp;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static ArrayList<Object> al2alo(ArrayList<Msg> alm) {
+        return (ArrayList)alm;
     }
 }
