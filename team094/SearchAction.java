@@ -20,7 +20,6 @@ class SearchAction extends Action {
     // 4 = completed
     // -1 = done
     byte state = 0;
-    boolean mailboxChecked = false;
     int broadcastTurn;
     ArrayList<Msg> results = null;
 
@@ -39,10 +38,6 @@ class SearchAction extends Action {
     public boolean canAct() {
         switch (state) {
         case 0:
-            if (mailboxChecked) {
-                mailboxChecked = false;
-                return false;
-            }
             return canReqUnits();
         case 1:
             // When returning false,
@@ -84,7 +79,6 @@ class SearchAction extends Action {
             break;
         case 2:
             results = fetchACKs();
-            mailboxChecked = true;
             if (results.size() > 0) {
                 setComplete();
             } else {
@@ -103,7 +97,6 @@ class SearchAction extends Action {
     public SearchAction copy() {
         return new SearchAction(agent, type, status);
     }
-
 
     public String toString() {
         return "{req, [" + type + ", " + status + "]}";

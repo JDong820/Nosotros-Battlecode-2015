@@ -52,17 +52,18 @@ class Task {
         Task curr = getCurrent();
         if (curr.action == null || !curr.action.canAct())
             nextActionable();
-        //System.out.println("Reset to action: " + getCurrent().action);
-        //System.out.println("nodeIndex: " + nodeIndex + ", subtreeSize: " + subtreeSize);
+        //System.out.print("Reset to task: " + getCurrent());
+        //System.out.println("@ nodeIndex: " + nodeIndex + ".");
         return nodeIndex < subtreeSize;
     }
     public Task getCurrent() {
         return getNodeByPriority(nodeIndex);
     }
     public void nextActionable() {
+        // TODO: memoize the repeated calls to getCurrent()
         while (++nodeIndex < subtreeSize &&
-                getCurrent().action != null &&
-                !getCurrent().action.canAct());
+               getCurrent().action != null &&
+               !getCurrent().action.canAct());
     }
 
     public void addParallel(Action a) {
@@ -86,7 +87,7 @@ class Task {
     }
 
     public String toString() {
-        String output = action + "(" + subtreeSize + ")\n";
+        String output = action + "(0)\n";
         Queue<Task> currentLevel = new ArrayDeque<Task>();
         currentLevel.add(this);
         int count = subtreeSize - 1;
@@ -98,7 +99,7 @@ class Task {
                 for(Task child: node.getChildren()) {
                     --count;
                     output += child.getAction() +
-                              "(" + child.getSubtreeSize() + ") ";
+                              "(" + (subtreeSize - 2 - count) + ") ";
                     currentLevel.add(child);
                 }
             }
@@ -117,6 +118,7 @@ class Task {
     // Priority (min, max) = (subtreeSize - 1, 0)
     // Automagically returns nth most important node.
     private Task getNodeByPriority(int n) {
+        //System.out.println("Grabbing node with prio: " + n);
         if (nodeIndex < subtreeSize) {
             if (n == 0) {
                 return this;
